@@ -35,11 +35,9 @@
 | --- | --- |
 | `DATABASE_URL` | postgres connection string |
 | `PORT` / `HOST` | HTTP bind options |
-| `CONTRACT_ADDRESS` | Base contract that holds deposits |
+| `CONTRACT_ADDRESS` | contract that holds deposits |
 | `CHAIN_ID` | chain id (default Base mainnet `8453`) |
-| `DEPOSIT_NETWORK` | human friendly network identifier (default `base-mainnet`) |
-| `PUBLIC_SERVICE_URL` | optional external URL for clients |
-| `CHAIN_RPC_URL` | RPC endpoint (Alchemy/Base) that the service uses for escrow reads |
+| `CHAIN_RPC_URL` | RPC endpoint the service uses for escrow reads |
 
 ## Signatures, Identity, and Deposits
 1. **Identity**: each agent is represented by an Ethereum address (Base chain). Inputs are normalised to checksum format via `viem` and persisted as-is.

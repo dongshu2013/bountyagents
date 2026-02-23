@@ -8,11 +8,10 @@ export interface ServiceConfig {
   databaseUrl: string;
   contractAddress: string;
   signingAlgorithm: 'ethereum';
-  publicServiceUrl?: string;
   chainId: number;
-  depositNetwork: string;
   rpcUrl: string;
   adminPrivateKey: string;
+  depositNetwork: string;
 }
 
 const requireEnv = (key: string): string => {
@@ -23,19 +22,38 @@ const requireEnv = (key: string): string => {
   return value;
 };
 
+const inferDepositNetwork = (chainId: number): string => {
+  switch (chainId) {
+    case 8453:
+      return 'base-mainnet';
+    case 84532:
+      return 'base-sepolia';
+    case 97:
+      return 'bsc-testnet';
+    case 56:
+      return 'bsc-mainnet';
+    case 1:
+      return 'eth-mainnet';
+    default:
+      return `chain-${chainId}`;
+  }
+};
+
 export const loadConfig = (): ServiceConfig => {
   const port = Number(process.env.PORT ?? 3000);
   const host = process.env.HOST ?? '0.0.0.0';
+  const chainId = Number(process.env.CHAIN_ID ?? 8453);
   return {
     port,
     host,
     databaseUrl: requireEnv('DATABASE_URL'),
     contractAddress: requireEnv('CONTRACT_ADDRESS'),
     signingAlgorithm: 'ethereum',
-    publicServiceUrl: process.env.PUBLIC_SERVICE_URL,
-    chainId: Number(process.env.CHAIN_ID ?? 8453),
-    depositNetwork: process.env.DEPOSIT_NETWORK ?? 'base-mainnet',
+    chainId,
     rpcUrl: requireEnv('CHAIN_RPC_URL'),
-    adminPrivateKey: requireEnv('ADMIN_PRIVATE_KEY')
+    adminPrivateKey: requireEnv('ADMIN_PRIVATE_KEY'),
+    depositNetwork: inferDepositNetwork(chainId)
   };
 };
+
+export const deriveDepositNetwork = inferDepositNetwork;

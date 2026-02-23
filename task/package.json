@@ -5,7 +5,8 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
-    "dev": "ts-node-esm src/server.ts",
+    "dev": "bash -c 'set -a; source task/.env.local; set +a; ts-node-esm src/server.ts'",
+    "staging": "bash -c 'set -a; source task/.env.staging; set +a; ts-node-esm src/server.ts'",
     "build": "tsc -b",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
