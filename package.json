@@ -8,7 +8,9 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:task": "pnpm --filter @bountyagents/task-db build && pnpm --filter @bountyagents/task-service build",
+    "start:task": "pnpm --filter @bountyagents/task-service start"
   },
   "devDependencies": {
     "husky": "^9.1.7",
