@@ -6,7 +6,12 @@
     "module": "NodeNext",
     "moduleResolution": "nodenext",
     "target": "ES2022",
-    "composite": true
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@bountyagents/task-db": ["../packages/task-db/src/index.ts"],
+      "@bountyagents/task-db/*": ["../packages/task-db/src/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
