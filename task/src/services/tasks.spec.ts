@@ -275,7 +275,7 @@ describe('decideOnResponse', () => {
       price: '50',
       token: 'bsc-testnet:0x9999999999999999999999999999999999999999'
     });
-    const updatedResponse = { ...sampleResponse, status: 'approved', settlement: 'cipher', settlement_signature: '0xsettle' };
+    const updatedResponse = { ...sampleResponse, status: 'approved', settlement: null, settlement_signature: '0xsettle' };
     db.updateResponseStatus.mockResolvedValue(updatedResponse);
     db.updateTaskStatus.mockResolvedValue({ ...sampleTask, status: 'finished' });
 
@@ -285,7 +285,6 @@ describe('decideOnResponse', () => {
       ownerAddress: sampleTask.owner,
       price: '50',
       status: 'approved' as const,
-      encryptedSettlement: 'cipher',
       settlementSignature: '0xsettle',
       signature: '0xdecision'
     };
@@ -296,7 +295,7 @@ describe('decideOnResponse', () => {
     expect(db.updateTaskStatus).toHaveBeenCalledWith(sampleTask.id, 'finished');
   });
 
-  it('rejects responses without settlement when approving', async () => {
+  it('rejects approvals without settlement signature', async () => {
     const { ctx, db } = makeContext();
     db.getResponseById.mockResolvedValue({ ...sampleResponse });
     db.getTaskById.mockResolvedValue({ ...sampleTask, status: 'active', price: '10', token: 'bsc-testnet:0x9999999999999999999999999999999999999999' });
@@ -359,7 +358,6 @@ describe('decideOnResponse', () => {
         ownerAddress: sampleTask.owner,
         price: '50',
         status: 'approved',
-        encryptedSettlement: 'cipher',
         settlementSignature: '0xsettle',
         signature: '0xdecision'
       })

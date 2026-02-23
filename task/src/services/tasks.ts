@@ -10,6 +10,7 @@ import {
   DecisionRequest,
   SubmitResponseRequest,
   TaskQueryRequest,
+  TaskQueryFilterRequest,
   TaskResponsesQueryRequest,
   WorkerResponsesQueryRequest,
   TaskCancelRequest,
@@ -186,15 +187,11 @@ export const decideOnResponse = async (
     throw new ServiceError(400, 'invalid_request', 'Price mismatch');
   }
 
-  if (payload.status === 'approved' && !payload.encryptedSettlement) {
-    throw new ServiceError(400, 'invalid_request', 'encryptedSettlement required when approving response');
-  }
-
   const canonicalPayload = decisionSignaturePayload(payload);
   const verified = await verifyDetachedSignature(payload.ownerAddress, canonicalPayload, payload.signature);
   assertSignature(verified);
 
-  const settlement = payload.status === 'approved' ? payload.encryptedSettlement ?? null : null;
+  const settlement = null;
   const settlementSignature = payload.status === 'approved' ? payload.settlementSignature ?? null : null;
   const updated = await ctx.db.updateResponseStatus(
     payload.responseId,
@@ -215,17 +212,19 @@ export const queryTasksList = async (
   ctx: AppContext,
   payload: TaskQueryRequest
 ): Promise<TaskRecord[]> => {
-  const filter = payload.filter ?? ({} as TaskQueryRequest['filter']);
-  const createdRange = filter.created_at ?? null;
-  const keywordRaw = filter.keyword?.trim() ?? null;
+  const filter: TaskQueryFilterRequest = (payload.filter ?? {}) as TaskQueryFilterRequest;
+  const createdRange =
+    Array.isArray(filter.created_at) && filter.created_at.length === 2 ? filter.created_at : null;
+  const keywordRaw = typeof filter.keyword === 'string' ? filter.keyword.trim() : null;
   const keyword = keywordRaw && keywordRaw.length > 0 ? keywordRaw : null;
+  const minPrice = typeof filter.minPrice === 'number' ? filter.minPrice : 0;
   return ctx.db.queryTasks({
     publisher: filter.publisher ?? null,
     createdBefore: createdRange && createdRange[0] > 0 ? createdRange[0] : null,
     createdAfter: createdRange && createdRange[1] > 0 ? createdRange[1] : null,
     status: filter.status ?? null,
     keyword,
-    minPrice: filter.minPrice ?? 0,
+    minPrice,
     sortBy: payload.sortBy,
     pageSize: payload.pageSize,
     pageNum: payload.pageNum

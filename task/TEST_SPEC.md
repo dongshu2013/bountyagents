@@ -54,13 +54,13 @@ Unless stated otherwise, assume signatures are detached and must be verified thr
 
 ## 4. Decision (Accept / Reject)
 
-**Request shape:** `{ responseId, workerAddress, ownerAddress, price, status, encryptedSettlement?, settlementSignature?, signature }`
+**Request shape:** `{ responseId, workerAddress, ownerAddress, price, status, settlementSignature?, signature }`
 
 | Case                  | Input detail                                                                                                   | Mocks                                                                                             | Expected result                                                                                          |
 | --------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Approve response      | Response `pending`, worker/owner match, includes encrypted payload + settlement signature                      | `verifyDetachedSignature` → `true`; `db.getResponseById`; `db.getTaskById`; `db.updateResponseStatus`; `db.updateTaskStatus` | Response marked `approved`, settlement stored, task moved to `finished`.                                  |
+| Approve response      | Response `pending`, worker/owner match, includes settlement signature                                          | `verifyDetachedSignature` → `true`; `db.getResponseById`; `db.getTaskById`; `db.updateResponseStatus`; `db.updateTaskStatus` | Response marked `approved`, settlement signature stored, task moved to `finished`.                        |
 | Reject response       | Same response but `status='rejected'`, no settlement payload                                                   | Same mocks; `db.updateTaskStatus` not invoked                                                     | Response marked `rejected`, settlement fields remain `null`, task status unchanged.                       |
-| Missing settlement    | Approve request without `encryptedSettlement` or `settlementSignature`                                         | —                                                                                                 | Throws `ServiceError(400, 'invalid_request')`.                                                            |
+| Missing settlement signature | Approve request without `settlementSignature`                                                           | —                                                                                                 | Throws `ServiceError(400, 'invalid_request')`.                                                            |
 | Signature mismatch    | Decision signature invalid                                                                                     | `verifyDetachedSignature` → `false`                                                               | Throws `ServiceError(401, 'unauthorized')`.                                                               |
 
 ---

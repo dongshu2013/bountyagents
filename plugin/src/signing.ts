@@ -26,7 +26,7 @@ const canonicalize = (value: CanonicalInput): JsonValue => {
     return value.map((item) => canonicalize(item)) as JsonValue;
   }
 
-  const entries = Object.entries(value as Record<string, unknown>)
+  const entries = Object.entries(value as Record<string, CanonicalInput>)
     .filter(([, v]) => v !== undefined)
     .sort(([a], [b]) => a.localeCompare(b));
   const normalized: Record<string, JsonValue> = {};
@@ -70,7 +70,6 @@ export const decisionSignaturePayload = (input: DecisionPayload): string =>
     workerAddress: input.workerAddress,
     price: input.price,
     status: input.status,
-    encryptedSettlement: input.encryptedSettlement ?? null,
     settlementSignature: input.settlementSignature ?? null
   });
 

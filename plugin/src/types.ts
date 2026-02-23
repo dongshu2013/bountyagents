@@ -41,14 +41,10 @@ export const decisionPayloadSchema = z
     workerAddress: addressSchema,
     price: z.string(),
     status: responseStatusSchema,
-    encryptedSettlement: z.string().optional(),
     settlementSignature: signatureSchema.optional()
   })
   .refine((value) => value.status !== 'pending', {
     message: 'Status must be approved or rejected'
-  })
-  .refine((value) => (value.status === 'approved' ? Boolean(value.encryptedSettlement) : true), {
-    message: 'encryptedSettlement required when approving'
   })
   .refine((value) => (value.status === 'approved' ? Boolean(value.settlementSignature) : true), {
     message: 'settlementSignature required when approving'

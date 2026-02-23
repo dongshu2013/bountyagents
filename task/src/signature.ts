@@ -70,7 +70,6 @@ export const decisionSignaturePayload = (input: DecisionRequest): string =>
     workerAddress: input.workerAddress,
     price: input.price,
     status: input.status,
-    encryptedSettlement: input.encryptedSettlement ?? null,
     settlementSignature: input.settlementSignature ?? null
   });
 

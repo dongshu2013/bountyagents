@@ -7,11 +7,13 @@
   "scripts": {
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "ts-node": "^10.9.2"
+    "husky": "^9.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
   },
   "pnpm": {
     "packageManager": "pnpm@8.15.4"

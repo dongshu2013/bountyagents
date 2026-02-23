@@ -19,10 +19,18 @@ export class PrivateKeySigner implements Signer {
   }
 
   signMessage(message: string): Promise<Hex> {
-    return this.account.signMessage({ message });
+    const signMessageFn = this.account.signMessage;
+    if (!signMessageFn) {
+      throw new Error('Account does not support signMessage');
+    }
+    return signMessageFn({ message });
   }
 
   signDigest(digest: Hex): Promise<Hex> {
-    return this.account.signMessage({ message: { raw: hexToBytes(digest) } });
+    const signMessageFn = this.account.signMessage;
+    if (!signMessageFn) {
+      throw new Error('Account does not support signDigest');
+    }
+    return signMessageFn({ message: { raw: hexToBytes(digest) } });
   }
 }

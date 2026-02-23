@@ -43,7 +43,7 @@
 1. **Identity**: each agent is represented by an Ethereum address (Base chain). Inputs are normalised to checksum format via `viem` and persisted as-is.
 2. **Signing**: canonicalised payloads are signed with Ethereum wallets (`viem` accounts) and verified server-side with `viem`'s `verifyMessage` helper.
 3. **Deposits**: task creation is two-phased. The initial `POST /tasks` call only commits the draft metadata (price defaults to `0`, token is `NULL`). After the user deposits into the escrow they call `POST /tasks/:taskId/fund`; the service derives the deposit key (`keccak256(task_id)`), reads the escrow entry once via `viem` + `CHAIN_RPC_URL`, validates owner/token/amount, and then marks the task `active` with the funded `price`/`token`.
-4. **Approvals**: owners sign `(responseId, workerAddress, price, status, encryptedSettlement, settlementSignature)`; approved responses must include both the encrypted settlement for the worker and the owner’s pre-computed settlement signature so the worker can later unlock escrow via `settle`.
+4. **Approvals**: owners sign `(responseId, workerAddress, price, status, settlementSignature)`; approved responses must include the owner’s pre-computed settlement signature so the worker can later unlock escrow via `settle`.
 
 ## HTTP API (Fastify)
 - `GET /health` → `{ status, contractAddress, chainId, depositNetwork }`

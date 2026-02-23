@@ -27,7 +27,7 @@ import {
   cancelTaskSignaturePayload,
   decisionSignaturePayload,
   responseSignaturePayload,
-  taskFundingSignaturePayload,
+  taskFundSignaturePayload,
   taskResponsesQuerySignaturePayload,
   taskSettleSignaturePayload,
   taskSignaturePayload,
@@ -41,11 +41,11 @@ export interface BountyAgentsPluginOptions {
   contractAddress: string;
 }
 
-export interface PluginTool<TInput = unknown> {
+export interface PluginTool {
   name: string;
   description: string;
-  inputSchema: z.ZodType<TInput>;
-  execute: (input: TInput) => Promise<unknown>;
+  inputSchema: z.ZodTypeAny;
+  execute: (input: unknown) => Promise<unknown>;
 }
 
 const normalizeUrl = (url: string) => url.replace(/\/$/, '');
@@ -78,17 +78,21 @@ abstract class BaseBountyPlugin {
     if (!tool) {
       throw new Error(`Tool ${name} not found`);
     }
-    const parsed = tool.inputSchema.parse(input);
-    return tool.execute(parsed);
+    return tool.execute(input);
   }
 
-  protected registerTool<TInput>(
+  protected registerTool<TSchema extends z.ZodTypeAny>(
     name: string,
     description: string,
-    schema: z.ZodType<TInput>,
-    executor: (input: TInput) => Promise<unknown>
+    schema: TSchema,
+    executor: (input: z.infer<TSchema>) => Promise<unknown>
   ) {
-    this.tools.push({ name, description, inputSchema: schema, execute: executor });
+    this.tools.push({
+      name,
+      description,
+      inputSchema: schema,
+      execute: (rawInput: unknown) => executor(schema.parse(rawInput))
+    });
   }
 
   protected async request(path: string, body?: unknown, method: 'GET' | 'POST' = 'POST'): Promise<unknown> {
@@ -168,8 +172,7 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     );
   }
 
-  private async createTask(input: CreateTaskPayload): Promise<TaskRecord> {
-    const payload = createTaskPayloadSchema.parse(input);
+  private async createTask(payload: CreateTaskPayload): Promise<TaskRecord> {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
@@ -179,19 +182,17 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     return taskResponseSchema.parse(response).task;
   }
 
-  private async fundTask(input: FundTaskPayload): Promise<TaskRecord> {
-    const payload = fundTaskPayloadSchema.parse(input);
+  private async fundTask(payload: FundTaskPayload): Promise<TaskRecord> {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
-      signature: await this.signPayload(taskFundingSignaturePayload(payload))
+      signature: await this.signPayload(taskFundSignaturePayload(payload))
     };
     const response = await this.request(`/tasks/${payload.taskId}/fund`, body);
     return taskResponseSchema.parse(response).task;
   }
 
-  private async decideOnResponse(input: DecisionPayload): Promise<ResponseRecord> {
-    const payload = decisionPayloadSchema.parse(input);
+  private async decideOnResponse(payload: DecisionPayload): Promise<ResponseRecord> {
     const responseRecord = await this.fetchResponse(payload.responseId);
     const task = await this.fetchTask(responseRecord.task_id);
     if (!task.token || task.price === '0') {
@@ -200,8 +201,8 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     if (payload.price !== task.price) {
       throw new Error('Price does not match funded amount');
     }
-    const workerAddress = getAddress(payload.workerAddress);
-    if (workerAddress !== getAddress(responseRecord.worker)) {
+    const workerAddress = getAddress(payload.workerAddress as `0x${string}`);
+    if (workerAddress !== getAddress(responseRecord.worker as `0x${string}`)) {
       throw new Error('Worker address mismatch');
     }
 
@@ -210,7 +211,13 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
         ? await this.createSettlementSignature(responseRecord.task_id, workerAddress, payload.price, task.token)
         : undefined;
 
-    const canonicalPayload = { ...payload, settlementSignature };
+    const canonicalPayload: DecisionPayload = {
+      responseId: payload.responseId,
+      workerAddress,
+      price: payload.price,
+      status: payload.status,
+      settlementSignature
+    };
     const body = {
       ...canonicalPayload,
       ownerAddress: this.signer.address,
@@ -220,8 +227,7 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     return submissionResponseSchema.parse(response).response;
   }
 
-  private async cancelTask(input: CancelTaskPayload): Promise<TaskRecord> {
-    const payload = cancelTaskPayloadSchema.parse(input);
+  private async cancelTask(payload: CancelTaskPayload): Promise<TaskRecord> {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
@@ -231,18 +237,28 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     return taskResponseSchema.parse(response).task;
   }
 
-  private async queryTasks(input: TaskQueryPayload): Promise<TaskRecord[]> {
-    const payload = taskQueryPayloadSchema.parse(input);
-    const response = await this.request('/tasks/query', payload);
+  private async queryTasks(payload: TaskQueryPayload): Promise<TaskRecord[]> {
+    const canonicalFilter = (payload.filter ?? {}) as NonNullable<TaskQueryPayload['filter']>;
+    const pageSize = payload.pageSize ?? 50;
+    const pageNum = payload.pageNum ?? 0;
+    const body = {
+      filter: canonicalFilter,
+      sortBy: payload.sortBy ?? 'created_at',
+      pageSize,
+      pageNum
+    };
+    const response = await this.request('/tasks/query', body);
     return tasksListSchema.parse(response).tasks;
   }
 
-  private async queryTaskResponses(input: TaskResponsesQueryPayload): Promise<ResponseRecord[]> {
-    const payload = taskResponsesQueryPayloadSchema.parse(input);
+  private async queryTaskResponses(payload: TaskResponsesQueryPayload): Promise<ResponseRecord[]> {
+    const pageSize = payload.pageSize ?? 50;
+    const pageNum = payload.pageNum ?? 0;
     const canonicalPayload = {
-      ...payload,
-      pageSize: payload.pageSize ?? 50,
-      pageNum: payload.pageNum ?? 0
+      taskId: payload.taskId,
+      workerAddress: payload.workerAddress,
+      pageSize,
+      pageNum
     };
     const body = {
       ...canonicalPayload,
@@ -257,7 +273,7 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
 
   private async createSettlementSignature(
     taskId: string,
-    workerAddress: string,
+    workerAddress: `0x${string}`,
     price: string,
     tokenIdentifier: string
   ): Promise<Hex> {
@@ -298,8 +314,7 @@ export class BountyAgentsWorkerPlugin extends BaseBountyPlugin {
     );
   }
 
-  private async submitResponse(input: SubmitResponsePayload): Promise<ResponseRecord> {
-    const payload = submitResponsePayloadSchema.parse(input);
+  private async submitResponse(payload: SubmitResponsePayload): Promise<ResponseRecord> {
     const body = {
       ...payload,
       workerAddress: this.signer.address,
@@ -309,12 +324,13 @@ export class BountyAgentsWorkerPlugin extends BaseBountyPlugin {
     return submissionResponseSchema.parse(response).response;
   }
 
-  private async queryWorkerResponses(input: WorkerResponsesQueryPayload): Promise<ResponseRecord[]> {
-    const payload = workerResponsesQueryPayloadSchema.parse(input);
+  private async queryWorkerResponses(payload: WorkerResponsesQueryPayload): Promise<ResponseRecord[]> {
+    const pageSize = payload.pageSize ?? 50;
+    const pageNum = payload.pageNum ?? 0;
     const canonicalPayload = {
-      ...payload,
-      pageSize: payload.pageSize ?? 50,
-      pageNum: payload.pageNum ?? 0
+      taskId: payload.taskId,
+      pageSize,
+      pageNum
     };
     const body = {
       ...canonicalPayload,
@@ -327,8 +343,7 @@ export class BountyAgentsWorkerPlugin extends BaseBountyPlugin {
     return responsesListSchema.parse(response).responses;
   }
 
-  private async settleTask(input: SettleTaskPayload): Promise<{ task: TaskRecord; settlementSignature: string }> {
-    const payload = settleTaskPayloadSchema.parse(input);
+  private async settleTask(payload: SettleTaskPayload): Promise<{ task: TaskRecord; settlementSignature: string }> {
     const canonicalPayload = { ...payload, workerAddress: this.signer.address };
     const body = {
       ...canonicalPayload,
