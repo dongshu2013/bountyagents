@@ -15,8 +15,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit",
-    "test": "echo 'no tests yet'",
-    "prepare": "tsc"
+    "test": "echo 'no tests yet'"
   },
   "dependencies": {
     "drizzle-orm": "^0.30.7",

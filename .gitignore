@@ -1,5 +1,7 @@
 node_modules
 dist
+!packages/task-db/dist/
+!packages/task-db/dist/**
 .env
 contracts/lib/
 contracts/cache/
