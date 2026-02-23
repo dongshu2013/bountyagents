@@ -63,7 +63,8 @@ export const createTask = async (ctx: AppContext, payload: CreateTaskRequest): P
     owner: ownerAddress,
     status: 'draft',
     price: '0',
-    token: null
+    token: null,
+    withdraw_signature: null
   });
 };
 
@@ -142,7 +143,8 @@ export const submitTaskResponse = async (
     id: payload.id ?? uuidv4(),
     task_id: payload.taskId,
     payload: payload.payload,
-    worker: workerAddress
+    worker: workerAddress,
+    settlement_signature: null
   });
 };
 

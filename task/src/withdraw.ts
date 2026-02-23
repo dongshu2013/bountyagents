@@ -40,5 +40,8 @@ export const signWithdrawAuthorization = async (
 ): Promise<Hex> => {
   const dataHash = buildWithdrawDataHash(config.contractAddress, key, owner, token, amount);
   const account = getAdminAccount(config.adminPrivateKey);
+  if (!account.signMessage) {
+    throw new Error('Admin account does not support signMessage');
+  }
   return account.signMessage({ message: { raw: hexToBytes(dataHash) } });
 };

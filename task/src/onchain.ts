@@ -31,7 +31,7 @@ const buildChain = (config: ServiceConfig): Chain => ({
     default: { http: [config.rpcUrl] },
     public: { http: [config.rpcUrl] }
   }
-});
+}) as Chain;
 
 const getClient = (config: ServiceConfig) => {
   if (!cachedClient || cachedClient.rpcUrl !== config.rpcUrl) {

@@ -1,6 +1,6 @@
 import { Pool, PoolConfig } from 'pg';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { SQL, and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { responses, schema, tasks } from './schema.js';
 
@@ -256,9 +256,9 @@ export class TaskDb {
     options: TaskResponsesPageOptions
   ): Promise<ResponseRecord[]> {
     const { limit, offset } = TaskDb.normalizePagination(options.pageSize, options.pageNum);
-    let condition = eq(responses.task_id, taskId);
+    let condition: SQL<unknown> = eq(responses.task_id, taskId);
     if (options.worker) {
-      condition = and(condition, eq(responses.worker, options.worker));
+      condition = (and(condition, eq(responses.worker, options.worker)) as SQL<unknown>);
     }
     const rows = await this.db
       .select()
@@ -275,9 +275,9 @@ export class TaskDb {
     options: WorkerResponsesPageOptions
   ): Promise<ResponseRecord[]> {
     const { limit, offset } = TaskDb.normalizePagination(options.pageSize, options.pageNum);
-    let condition = eq(responses.worker, worker);
+    let condition: SQL<unknown> = eq(responses.worker, worker);
     if (options.taskId) {
-      condition = and(condition, eq(responses.task_id, options.taskId));
+      condition = (and(condition, eq(responses.task_id, options.taskId)) as SQL<unknown>);
     }
     const rows = await this.db
       .select()
