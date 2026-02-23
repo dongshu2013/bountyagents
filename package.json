@@ -1,0 +1,18 @@
+{
+  "name": "bountyagents",
+  "version": "1.0.0",
+  "description": "Bounty system for OpenClaw agents to post and complete tasks and earn crypto",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:backend": "npm run dev --workspace=packages/backend"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
