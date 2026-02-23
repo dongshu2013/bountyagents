@@ -7,7 +7,10 @@ import {
   submitResponseSchema,
   taskQuerySchema,
   taskResponsesQuerySchema,
-  workerResponsesQuerySchema
+  workerResponsesQuerySchema,
+  taskCancelSchema,
+  taskSettleSchema,
+  taskFundingSchema
 } from './schemas.js';
 import { AppContext } from './context.js';
 import {
@@ -17,10 +20,11 @@ import {
   submitTaskResponse,
   queryTasksList,
   queryTaskResponses,
-  queryWorkerResponses
+  queryWorkerResponses,
+  cancelTask,
+  settleTask,
+  fundTask
 } from './services/tasks.js';
-import { fetchDepositInfo, taskDepositKey } from './onchain.js';
-import { normalizeAddress } from './crypto.js';
 
 const idParamSchema = z.object({ id: z.string().uuid() });
 const taskIdParamSchema = z.object({ taskId: z.string().uuid() });
@@ -43,30 +47,6 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
     origin: true
   });
 
-  const zeroAddress = '0x0000000000000000000000000000000000000000';
-
-  const formatTask = async (task: any) => {
-    const depositKey = taskDepositKey(task.id);
-    try {
-      const onChain = await fetchDepositInfo(config, depositKey);
-      if (onChain.owner === zeroAddress) {
-        return { ...task, deposit: null };
-      }
-      return {
-        ...task,
-        deposit: {
-          owner: normalizeAddress(onChain.owner),
-          tokenAddress: normalizeAddress(onChain.token),
-          amount: onChain.amountLocked.toString(),
-          released: onChain.released
-        }
-      };
-    } catch (error) {
-      app.log.error({ err: error, taskId: task.id }, 'Unable to fetch deposit info');
-      return { ...task, deposit: null };
-    }
-  };
-
   app.get('/health', async () => ({
     status: 'ok',
     contractAddress: config.contractAddress,
@@ -77,8 +57,7 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
   app.get('/tasks', async (request, reply) => {
     const owner = typeof request.query === 'object' ? (request.query as any).owner : undefined;
     const tasks = await db.listTasks(owner);
-    const hydrated = await Promise.all(tasks.map((task) => formatTask(task)));
-    reply.send({ tasks: hydrated });
+    reply.send({ tasks });
   });
 
   app.get('/tasks/:id', async (request, reply) => {
@@ -87,14 +66,26 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
     if (!task) {
       return reply.code(404).send({ error: 'not_found', message: 'Task not found' });
     }
-    return reply.send({ task: await formatTask(task) });
+    return reply.send({ task });
   });
 
   app.post('/tasks', async (request, reply) => {
     const payload = createTaskRequestSchema.parse(request.body);
     try {
       const task = await createTaskAction({ config, db }, payload);
-      return reply.code(201).send({ task: await formatTask(task) });
+      return reply.code(201).send({ task });
+    } catch (error) {
+      if (handleServiceError(reply, error)) return;
+      throw error;
+    }
+  });
+
+  app.post('/tasks/:taskId/fund', async (request, reply) => {
+    const { taskId } = taskIdParamSchema.parse(request.params);
+    const payload = taskFundingSchema.parse({ ...(request.body as object), taskId });
+    try {
+      const task = await fundTask({ config, db }, payload);
+      return reply.send({ task });
     } catch (error) {
       if (handleServiceError(reply, error)) return;
       throw error;
@@ -105,8 +96,7 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
     const payload = taskQuerySchema.parse(request.body ?? {});
     try {
       const tasks = await queryTasksList({ config, db }, payload);
-      const hydrated = await Promise.all(tasks.map((task) => formatTask(task)));
-      return reply.send({ tasks: hydrated });
+      return reply.send({ tasks });
     } catch (error) {
       if (handleServiceError(reply, error)) return;
       throw error;
@@ -172,6 +162,30 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
     try {
       const responses = await queryWorkerResponses({ config, db }, payload);
       return reply.send({ responses });
+    } catch (error) {
+      if (handleServiceError(reply, error)) return;
+      throw error;
+    }
+  });
+
+  app.post('/tasks/:taskId/cancel', async (request, reply) => {
+    const { taskId } = taskIdParamSchema.parse(request.params);
+    const payload = taskCancelSchema.parse({ ...(request.body as object), taskId });
+    try {
+      const task = await cancelTask({ config, db }, payload);
+      return reply.send({ task });
+    } catch (error) {
+      if (handleServiceError(reply, error)) return;
+      throw error;
+    }
+  });
+
+  app.post('/tasks/:taskId/settle', async (request, reply) => {
+    const { taskId } = taskIdParamSchema.parse(request.params);
+    const payload = taskSettleSchema.parse({ ...(request.body as object), taskId });
+    try {
+      const result = await settleTask({ config, db }, payload);
+      return reply.send(result);
     } catch (error) {
       if (handleServiceError(reply, error)) return;
       throw error;

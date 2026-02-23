@@ -49,13 +49,8 @@ contract AgentEscrow is Ownable {
         serviceFeeBps = _serviceFeeBps;
     }
 
-    function getDeposit(bytes32 key)
-        external
-        view
-        returns (address ownerAddress, address tokenAddress, uint256 amountLocked, bool released)
-    {
-        TaskDeposit storage entry = deposits[key];
-        return (entry.owner, entry.token, entry.amountLocked, entry.released);
+    function getDeposit(bytes32 key) external view returns (TaskDeposit memory) {
+        return deposits[key];
     }
 
     function setAdminSigner(address newSigner) external onlyOwner {
@@ -95,19 +90,18 @@ contract AgentEscrow is Ownable {
         emit DepositRegistered(key, msg.sender, token, locked, fee);
     }
 
-    function withdraw(bytes32 key, address recipient, bytes calldata adminSignature) external {
+    function withdraw(bytes32 key, bytes calldata adminSignature) external {
         TaskDeposit storage entry = deposits[key];
         if (entry.owner == address(0)) revert DepositMissing(key);
         if (entry.released) revert DepositAlreadyReleased(key);
-        require(recipient != address(0), 'recipient zero');
         require(msg.sender == entry.owner, 'unauthorized');
 
-        bytes32 digest = _withdrawDigest(key, entry.owner, entry.token, recipient, entry.amountLocked);
+        bytes32 digest = _withdrawDigest(key, entry.owner, entry.token, entry.amountLocked);
         if (_recover(digest, adminSignature) != adminSigner) revert InvalidSignature();
 
         entry.released = true;
-        IERC20(entry.token).transfer(recipient, entry.amountLocked);
-        emit DepositReleased(key, entry.owner, recipient, entry.amountLocked, false);
+        IERC20(entry.token).transfer(entry.owner, entry.amountLocked);
+        emit DepositReleased(key, entry.owner, entry.owner, entry.amountLocked, false);
     }
 
     function settle(bytes32 key, address recipient, bytes calldata ownerSignature) external {
@@ -128,10 +122,9 @@ contract AgentEscrow is Ownable {
         bytes32 key,
         address ownerAddress,
         address token,
-        address recipient,
         uint256 amount
     ) external view returns (bytes32) {
-        return _withdrawDigest(key, ownerAddress, token, recipient, amount);
+        return _withdrawDigest(key, ownerAddress, token, amount);
     }
 
     function computeSettleDigest(
@@ -148,10 +141,9 @@ contract AgentEscrow is Ownable {
         bytes32 key,
         address ownerAddress,
         address token,
-        address recipient,
         uint256 amount
     ) private view returns (bytes32) {
-        bytes32 dataHash = keccak256(abi.encodePacked('WITHDRAW', address(this), key, ownerAddress, token, recipient, amount));
+        bytes32 dataHash = keccak256(abi.encodePacked('WITHDRAW', address(this), key, ownerAddress, token, amount));
         return _toEthSignedMessageHash(dataHash);
     }
 

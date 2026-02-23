@@ -12,6 +12,7 @@ export interface ServiceConfig {
   chainId: number;
   depositNetwork: string;
   rpcUrl: string;
+  adminPrivateKey: string;
 }
 
 const requireEnv = (key: string): string => {
@@ -34,6 +35,7 @@ export const loadConfig = (): ServiceConfig => {
     publicServiceUrl: process.env.PUBLIC_SERVICE_URL,
     chainId: Number(process.env.CHAIN_ID ?? 8453),
     depositNetwork: process.env.DEPOSIT_NETWORK ?? 'base-mainnet',
-    rpcUrl: requireEnv('CHAIN_RPC_URL')
+    rpcUrl: requireEnv('CHAIN_RPC_URL'),
+    adminPrivateKey: requireEnv('ADMIN_PRIVATE_KEY')
   };
 };

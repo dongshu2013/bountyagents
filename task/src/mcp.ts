@@ -6,7 +6,10 @@ import {
   submitResponseSchema,
   taskQuerySchema,
   taskResponsesQuerySchema,
-  workerResponsesQuerySchema
+  workerResponsesQuerySchema,
+  taskCancelSchema,
+  taskSettleSchema,
+  taskFundingSchema
 } from './schemas.js';
 import {
   createTask,
@@ -14,10 +17,11 @@ import {
   submitTaskResponse,
   queryTasksList,
   queryTaskResponses,
-  queryWorkerResponses
+  queryWorkerResponses,
+  cancelTask,
+  settleTask,
+  fundTask
 } from './services/tasks.js';
-import { fetchDepositInfo, taskDepositKey } from './onchain.js';
-import { normalizeAddress } from './crypto.js';
 
 const makeJsonResult = (data: unknown) => ({
   content: [
@@ -47,26 +51,6 @@ export const createTaskMcpServer = async (ctx: AppContext): Promise<GenericMcpSe
     description: 'Provides tools to post tasks and handle responses for bounty agents.'
   });
 
-  const hydrateTask = async (task: any) => {
-    try {
-      const onChain = await fetchDepositInfo(ctx.config, taskDepositKey(task.id));
-      if (onChain.owner === '0x0000000000000000000000000000000000000000') {
-        return { ...task, deposit: null };
-      }
-      return {
-        ...task,
-        deposit: {
-          owner: normalizeAddress(onChain.owner),
-          tokenAddress: normalizeAddress(onChain.token),
-          amount: onChain.amountLocked.toString(),
-          released: onChain.released
-        }
-      };
-    } catch {
-      return { ...task, deposit: null };
-    }
-  };
-
   const wrap = async (schema: z.ZodTypeAny, handler: (payload: any) => Promise<unknown>, raw: any) => {
     const payload = schema.parse(raw?.arguments ?? raw);
     const result = await handler(payload);
@@ -80,11 +64,16 @@ export const createTaskMcpServer = async (ctx: AppContext): Promise<GenericMcpSe
       inputSchema: createJsonSchema(createTaskRequestSchema)
     },
     async (raw: any) =>
-      wrap(
-        createTaskRequestSchema,
-        async (payload) => ({ task: await hydrateTask(await createTask(ctx, payload)) }),
-        raw
-      )
+      wrap(createTaskRequestSchema, async (payload) => ({ task: await createTask(ctx, payload) }), raw)
+  );
+
+  server.tool(
+    'task.fund',
+    {
+      description: 'Attach funding info to a draft task after the escrow deposit is live.',
+      inputSchema: createJsonSchema(taskFundingSchema)
+    },
+    async (raw: any) => wrap(taskFundingSchema, async (payload) => ({ task: await fundTask(ctx, payload) }), raw)
   );
 
   server.tool(
@@ -113,14 +102,7 @@ export const createTaskMcpServer = async (ctx: AppContext): Promise<GenericMcpSe
       description: 'Query tasks with filters (publisher, keyword, price, time).',
       inputSchema: createJsonSchema(taskQuerySchema)
     },
-    async (raw: any) =>
-      wrap(
-        taskQuerySchema,
-        async (payload) => ({
-          tasks: await Promise.all((await queryTasksList(ctx, payload)).map((task: any) => hydrateTask(task)))
-        }),
-        raw
-      )
+    async (raw: any) => wrap(taskQuerySchema, async (payload) => ({ tasks: await queryTasksList(ctx, payload) }), raw)
   );
 
   server.tool(
@@ -149,6 +131,24 @@ export const createTaskMcpServer = async (ctx: AppContext): Promise<GenericMcpSe
         async (payload) => ({ responses: await queryWorkerResponses(ctx, payload) }),
         raw
       )
+  );
+
+  server.tool(
+    'task.cancel',
+    {
+      description: 'Cancel a task (owner signature required).',
+      inputSchema: createJsonSchema(taskCancelSchema)
+    },
+    async (raw: any) => wrap(taskCancelSchema, async (payload) => ({ task: await cancelTask(ctx, payload) }), raw)
+  );
+
+  server.tool(
+    'task.settle',
+    {
+      description: 'Fetch the owner settlement signature for an approved response.',
+      inputSchema: createJsonSchema(taskSettleSchema)
+    },
+    async (raw: any) => wrap(taskSettleSchema, async (payload) => await settleTask(ctx, payload), raw)
   );
 
   if (typeof (server as any).start !== 'function') {

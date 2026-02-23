@@ -9,8 +9,9 @@ export const tasks = pgTable(
     owner: varchar('owner', { length: 255 }).notNull(),
     created_at: bigint('created_at', { mode: 'number' }).notNull(),
     status: varchar('status', { length: 32 }).notNull().default('draft'),
-    price: varchar('price', { length: 255 }).notNull(),
-    token: varchar('token', { length: 255 }).notNull()
+    price: varchar('price', { length: 255 }).notNull().default('0'),
+    token: varchar('token', { length: 255 }),
+    withdraw_signature: text('withdraw_signature')
   }
 );
 
@@ -25,7 +26,8 @@ export const responses = pgTable(
     worker: varchar('worker', { length: 255 }).notNull(),
     status: varchar('status', { length: 32 }).notNull().default('pending'),
     created_at: bigint('created_at', { mode: 'number' }).notNull(),
-    settlement: text('settlement')
+    settlement: text('settlement'),
+    settlement_signature: text('settlement_signature')
   },
   (table) => ({
     taskIdx: index('responses_task_id_idx').on(table.task_id)

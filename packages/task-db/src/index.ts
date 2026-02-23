@@ -18,7 +18,8 @@ export const taskRecordSchema = z.object({
   created_at: z.number(),
   status: taskStatusSchema,
   price: z.string(),
-  token: z.string()
+  token: z.string().nullable(),
+  withdraw_signature: z.string().nullable()
 });
 export type TaskRecord = z.infer<typeof taskRecordSchema>;
 
@@ -29,7 +30,8 @@ export const responseRecordSchema = z.object({
   worker: z.string(),
   status: responseStatusSchema,
   created_at: z.number(),
-  settlement: z.string().nullable()
+  settlement: z.string().nullable(),
+  settlement_signature: z.string().nullable()
 });
 export type ResponseRecord = z.infer<typeof responseRecordSchema>;
 
@@ -42,6 +44,7 @@ export type NewResponseInput = Omit<ResponseRecord, 'created_at' | 'status' | 's
   status?: ResponseStatus;
   created_at?: number;
   settlement?: string | null;
+  settlement_signature?: string | null;
 };
 
 export type TaskSortKey = 'price' | 'created_at';
@@ -72,11 +75,17 @@ export interface WorkerResponsesPageOptions {
 
 const nowEpoch = (): number => Date.now();
 
-const parseTaskRow = (row: any): TaskRecord => taskRecordSchema.parse(row);
+const parseTaskRow = (row: any): TaskRecord =>
+  taskRecordSchema.parse({
+    ...row,
+    token: row.token ?? null,
+    withdraw_signature: row.withdraw_signature ?? null
+  });
 const parseResponseRow = (row: any): ResponseRecord =>
   responseRecordSchema.parse({
     ...row,
-    settlement: row.settlement ?? null
+    settlement: row.settlement ?? null,
+    settlement_signature: row.settlement_signature ?? null
   });
 
 export class TaskDb {
@@ -99,8 +108,9 @@ export class TaskDb {
         owner VARCHAR(255) NOT NULL,
         created_at BIGINT NOT NULL,
         status VARCHAR(32) NOT NULL,
-        price VARCHAR(255) NOT NULL,
-        token VARCHAR(255) NOT NULL
+        price VARCHAR(255) NOT NULL DEFAULT '0',
+        token VARCHAR(255),
+        withdraw_signature TEXT
       );
 
       CREATE TABLE IF NOT EXISTS responses (
@@ -110,11 +120,20 @@ export class TaskDb {
         worker VARCHAR(255) NOT NULL,
         status VARCHAR(32) NOT NULL,
         created_at BIGINT NOT NULL,
-        settlement TEXT
+        settlement TEXT,
+        settlement_signature TEXT
       );
       CREATE INDEX IF NOT EXISTS responses_task_id_idx ON responses(task_id);
       CREATE INDEX IF NOT EXISTS tasks_search_idx
         ON tasks USING GIN (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(content, '')));
+      ALTER TABLE tasks
+        ALTER COLUMN price SET DEFAULT '0';
+      ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS token VARCHAR(255);
+      ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS withdraw_signature TEXT;
+      ALTER TABLE responses
+        ADD COLUMN IF NOT EXISTS settlement_signature TEXT;
     `);
   }
 
@@ -137,8 +156,9 @@ export class TaskDb {
         owner: input.owner,
         created_at,
         status,
-        price: input.price,
-        token: input.token
+        price: input.price ?? '0',
+        token: input.token ?? null,
+        withdraw_signature: input.withdraw_signature ?? null
       })
       .returning();
     return parseTaskRow(record);
@@ -272,14 +292,33 @@ export class TaskDb {
   async updateResponseStatus(
     responseId: string,
     status: ResponseStatus,
-    settlement?: string | null
+    settlement?: string | null,
+    settlementSignature?: string | null
   ): Promise<ResponseRecord | null> {
     const [record] = await this.db
       .update(responses)
-      .set({ status, settlement: settlement ?? null })
+      .set({ status, settlement: settlement ?? null, settlement_signature: settlementSignature ?? null })
       .where(eq(responses.id, responseId))
       .returning();
     return record ? parseResponseRow(record) : null;
+  }
+
+  async markTaskFunded(taskId: string, price: string, token: string): Promise<TaskRecord | null> {
+    const [record] = await this.db
+      .update(tasks)
+      .set({ price, token, status: 'active' })
+      .where(eq(tasks.id, taskId))
+      .returning();
+    return record ? parseTaskRow(record) : null;
+  }
+
+  async storeWithdrawSignature(taskId: string, signature: string): Promise<TaskRecord | null> {
+    const [record] = await this.db
+      .update(tasks)
+      .set({ withdraw_signature: signature })
+      .where(eq(tasks.id, taskId))
+      .returning();
+    return record ? parseTaskRow(record) : null;
   }
 }
 

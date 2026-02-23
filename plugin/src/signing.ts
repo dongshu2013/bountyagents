@@ -1,4 +1,13 @@
-import { CreateTaskPayload, DecisionPayload, SubmitResponsePayload } from './types.js';
+import {
+  CancelTaskPayload,
+  CreateTaskPayload,
+  DecisionPayload,
+  FundTaskPayload,
+  SettleTaskPayload,
+  SubmitResponsePayload,
+  TaskResponsesQueryPayload,
+  WorkerResponsesQueryPayload
+} from './types.js';
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -35,9 +44,15 @@ export const taskSignaturePayload = (input: CreateTaskPayload): string =>
     kind: 'task:create',
     title: input.title,
     content: input.content,
-    price: input.price,
-    token: input.token,
     id: input.id
+  });
+
+export const taskFundSignaturePayload = (input: FundTaskPayload): string =>
+  canonicalStringify({
+    kind: 'task:fund',
+    taskId: input.taskId,
+    price: input.price,
+    token: input.token
   });
 
 export const responseSignaturePayload = (input: SubmitResponsePayload): string =>
@@ -55,5 +70,45 @@ export const decisionSignaturePayload = (input: DecisionPayload): string =>
     workerAddress: input.workerAddress,
     price: input.price,
     status: input.status,
-    encryptedSettlement: input.encryptedSettlement ?? null
+    encryptedSettlement: input.encryptedSettlement ?? null,
+    settlementSignature: input.settlementSignature ?? null
+  });
+
+export const cancelTaskSignaturePayload = (input: CancelTaskPayload): string =>
+  canonicalStringify({
+    kind: 'task:cancel',
+    taskId: input.taskId
+  });
+
+export const taskSettleSignaturePayload = (
+  input: SettleTaskPayload & { workerAddress: string }
+): string =>
+  canonicalStringify({
+    kind: 'task:settle',
+    taskId: input.taskId,
+    responseId: input.responseId,
+    workerAddress: input.workerAddress
+  });
+
+export const taskResponsesQuerySignaturePayload = (
+  input: TaskResponsesQueryPayload & { ownerAddress: string }
+): string =>
+  canonicalStringify({
+    kind: 'task:response:query',
+    taskId: input.taskId,
+    ownerAddress: input.ownerAddress,
+    workerAddress: input.workerAddress ?? null,
+    pageSize: input.pageSize ?? 50,
+    pageNum: input.pageNum ?? 0
+  });
+
+export const workerResponsesQuerySignaturePayload = (
+  input: WorkerResponsesQueryPayload & { workerAddress: string }
+): string =>
+  canonicalStringify({
+    kind: 'worker:response:query',
+    workerAddress: input.workerAddress,
+    taskId: input.taskId ?? null,
+    pageSize: input.pageSize ?? 50,
+    pageNum: input.pageNum ?? 0
   });

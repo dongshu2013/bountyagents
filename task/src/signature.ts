@@ -3,7 +3,10 @@ import {
   DecisionRequest,
   SubmitResponseRequest,
   TaskResponsesQueryRequest,
-  WorkerResponsesQueryRequest
+  WorkerResponsesQueryRequest,
+  TaskCancelRequest,
+  TaskSettleRequest,
+  TaskFundingRequest
 } from './schemas.js';
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -41,9 +44,15 @@ export const taskSignaturePayload = (input: CreateTaskRequest): string =>
     kind: 'task:create',
     title: input.title,
     content: input.content,
-    price: input.price,
-    token: input.token,
     id: input.id
+  });
+
+export const taskFundingSignaturePayload = (input: TaskFundingRequest): string =>
+  canonicalStringify({
+    kind: 'task:fund',
+    taskId: input.taskId,
+    price: input.price,
+    token: input.token
   });
 
 export const responseSignaturePayload = (input: SubmitResponseRequest): string =>
@@ -61,7 +70,8 @@ export const decisionSignaturePayload = (input: DecisionRequest): string =>
     workerAddress: input.workerAddress,
     price: input.price,
     status: input.status,
-    encryptedSettlement: input.encryptedSettlement ?? null
+    encryptedSettlement: input.encryptedSettlement ?? null,
+    settlementSignature: input.settlementSignature ?? null
   });
 
 export const taskResponsesQuerySignaturePayload = (input: TaskResponsesQueryRequest): string =>
@@ -83,4 +93,18 @@ export const workerResponsesQuerySignaturePayload = (
     taskId: input.taskId ?? null,
     pageSize: input.pageSize ?? 50,
     pageNum: input.pageNum ?? 0
+  });
+
+export const taskCancelSignaturePayload = (input: TaskCancelRequest): string =>
+  canonicalStringify({
+    kind: 'task:cancel',
+    taskId: input.taskId
+  });
+
+export const taskSettleSignaturePayload = (input: TaskSettleRequest): string =>
+  canonicalStringify({
+    kind: 'task:settle',
+    taskId: input.taskId,
+    responseId: input.responseId,
+    workerAddress: input.workerAddress
   });

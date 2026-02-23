@@ -69,22 +69,19 @@ contract AgentEscrowTest is Test {
         assertEq(info.amountLocked, 95 ether);
         assertEq(token.balanceOf(feeRecipient), 5 ether);
 
-        (address recordedOwner, address recordedToken, uint256 lockedAmount, bool withdrawn) = escrow
-            .depositInfo(key);
-        assertEq(recordedOwner, ownerUser);
-        assertEq(recordedToken, address(token));
-        assertEq(lockedAmount, 95 ether);
-        assertFalse(withdrawn);
-
-        bytes32 withdrawDigest = escrow.computeWithdrawDigest(key, ownerUser, address(token), ownerUser, info.amountLocked);
+        bytes32 withdrawDigest = escrow.computeWithdrawDigest(key, ownerUser, address(token), info.amountLocked);
         (uint8 vA, bytes32 rA, bytes32 sA) = vm.sign(adminKey, withdrawDigest);
         bytes memory adminSig = abi.encodePacked(rA, sA, vA);
 
         vm.prank(ownerUser);
-        escrow.withdraw(key, ownerUser, adminSig);
+        escrow.withdraw(key, adminSig);
         assertEq(token.balanceOf(ownerUser), 95 ether + (1000 ether - 100 ether));
+        AgentEscrow.TaskDeposit memory afterInfo = escrow.getDeposit(key);
+        assertTrue(afterInfo.released);
 
-        vm.expectRevert(AgentEscrow.DepositAlreadyReleased.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(AgentEscrow.DepositAlreadyReleased.selector, key)
+        );
         escrow.settle(key, worker, hex'00');
     }
 
@@ -92,15 +89,15 @@ contract AgentEscrowTest is Test {
         bytes32 key = keccak256('task');
         vm.prank(ownerUser);
         escrow.deposit(key, address(token), 100 ether);
-        (address recordedOwner,, uint256 lockedAmount,) = escrow.getDeposit(key);
-        assertEq(recordedOwner, ownerUser);
+        AgentEscrow.TaskDeposit memory recorded = escrow.getDeposit(key);
+        assertEq(recorded.owner, ownerUser);
 
-        bytes32 settleDigest = escrow.computeSettleDigest(key, ownerUser, address(token), worker, lockedAmount);
+        bytes32 settleDigest = escrow.computeSettleDigest(key, ownerUser, address(token), worker, recorded.amountLocked);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, settleDigest);
         bytes memory ownerSig = abi.encodePacked(r, s, v);
 
         vm.prank(address(0x99));
         escrow.settle(key, worker, ownerSig);
-        assertEq(token.balanceOf(worker), lockedAmount);
+        assertEq(token.balanceOf(worker), recorded.amountLocked);
     }
 }
