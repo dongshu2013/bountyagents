@@ -5,7 +5,12 @@
     "outDir": "dist",
     "module": "NodeNext",
     "moduleResolution": "nodenext",
-    "target": "ES2022"
+    "target": "ES2022",
+    "composite": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "references": [
+    { "path": "../packages/task-db/tsconfig.json" }
+  ]
 }

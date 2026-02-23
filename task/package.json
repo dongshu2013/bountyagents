@@ -5,12 +5,12 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
-    "dev": "bash -c 'set -a; source task/.env.local; set +a; ts-node-esm src/server.ts'",
-    "staging": "bash -c 'set -a; source task/.env.staging; set +a; ts-node-esm src/server.ts'",
+    "dev": "bash -c 'set -a; source .env.local; set +a; ts-node-esm src/server.ts'",
+    "staging": "bash -c 'set -a; source .env.staging; set +a; ts-node-esm src/server.ts'",
     "build": "tsc -b",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
-    "test": "echo 'no tests yet'"
+    "test": "vitest run"
   },
   "dependencies": {
     "@bountyagents/task-db": "workspace:*",
@@ -22,6 +22,8 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2"
+    "@types/node": "^25.3.0",
+    "ts-node": "^10.9.2",
+    "vitest": "^4.0.18"
   }
 }
