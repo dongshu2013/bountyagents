@@ -5,3 +5,4 @@ dist
 contracts/lib/
 contracts/cache/
 contracts/out/
+.env.*

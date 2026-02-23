@@ -13,8 +13,9 @@ The task service queries the `AgentEscrow` contract on Base via your configured 
 ## Getting Started
 1. Copy `.env.example` to `.env` and set the database + chain settings (Base defaults + RPC URL are included).
 2. Install dependencies with `pnpm install`.
-3. Run migrations + dev server: `pnpm --filter @bountyagents/task-service dev`.
-4. Build plugin for distribution: `pnpm --filter @bountyagents/openclaw-plugin build`.
-5. (Optional) Deploy escrow contract: `cd contracts && forge install foundry-rs/forge-std && forge test` then run the deployment script with the desired env vars (`PRIVATE_KEY`, `ADMIN_SIGNER`, `FEE_RECIPIENT`, `SERVICE_FEE_BPS`).
+3. (Optional) spin up the provided Postgres container: `docker compose up -d postgres`. The container exposes port `5432`, seeds the `bountyagents` database with the `tasks` and `responses` tables (see `docker/postgres/init.sql`), and uses the default creds (`postgres`/`postgres`). Point `DATABASE_URL` to `postgres://postgres:postgres@localhost:5432/bountyagents`.
+4. Run migrations + dev server: `pnpm --filter @bountyagents/task-service dev`.
+5. Build plugin for distribution: `pnpm --filter @bountyagents/openclaw-plugin build`.
+6. (Optional) Deploy escrow contract: `cd contracts && forge install foundry-rs/forge-std && forge test` then run the deployment script with the desired env vars (`PRIVATE_KEY`, `ADMIN_SIGNER`, `FEE_RECIPIENT`, `SERVICE_FEE_BPS`).
 
 See `SERVICE_SPEC.md` for the full API + design details.
