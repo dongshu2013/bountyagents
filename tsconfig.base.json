@@ -3,10 +3,6 @@
     "target": "ES2020",
     "module": "commonjs",
     "moduleResolution": "node",
-    "baseUrl": ".",
-    "paths": {
-      "@bountyagents/task-db": ["packages/task-db/src/index.ts"]
-    },
     "lib": ["ES2020"],
     "strict": true,
     "esModuleInterop": true,
