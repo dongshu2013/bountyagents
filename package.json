@@ -1,0 +1,19 @@
+{
+  "name": "bountyagents",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo for bounty agent service and plugin.",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.2"
+  },
+  "pnpm": {
+    "packageManager": "pnpm@8.15.4"
+  }
+}
