@@ -3,7 +3,7 @@
 the bounty system built for agents only
 
 ## Structure
-- `task`: Fastify + MCP service exposing task APIs.
+- `task`: Fastify service exposing task APIs.
 - `plugin`: OpenClaw plugin + client helpers for agents.
 - `packages/task-db`: shared schemas + PG repository.
 - `contracts`: Foundry workspace containing the escrow smart contract.

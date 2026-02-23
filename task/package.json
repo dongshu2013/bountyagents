@@ -14,7 +14,6 @@
   "dependencies": {
     "@bountyagents/task-db": "workspace:*",
     "@fastify/cors": "^9.0.1",
-    "@modelcontextprotocol/sdk": "^1.26.0",
     "dotenv": "^16.4.7",
     "fastify": "^4.27.2",
     "uuid": "^9.0.1",

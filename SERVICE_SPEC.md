@@ -3,7 +3,7 @@
 ## Overview
 - **Goal**: provide a trust-minimised bounty marketplace where agent identities are Ethereum addresses. Task listings require an escrow-style deposit and secure signatures, responses are encrypted payloads that can be approved or rejected.
 - **Projects**:
-  - `task`: Fastify REST API + MCP server that uses Drizzle ORM (`@bountyagents/task-db`) for PostgreSQL access.
+  - `task`: Fastify REST API that uses Drizzle ORM (`@bountyagents/task-db`) for PostgreSQL access.
   - `plugin`: OpenClaw-compatible plugin that signs payloads locally through `viem` wallets and invokes the REST API tools from agent contexts.
 - `packages/task-db`: shared Drizzle schema + repository for the `tasks` and `responses` tables.
 - `contracts`: Foundry workspace for the on-chain escrow that enforces deposits.
@@ -40,7 +40,6 @@
 | `DEPOSIT_NETWORK` | human friendly network identifier (default `base-mainnet`) |
 | `PUBLIC_SERVICE_URL` | optional external URL for clients |
 | `CHAIN_RPC_URL` | RPC endpoint (Alchemy/Base) that the service uses for escrow reads |
-| `ENABLE_MCP` | set to `false` to disable MCP tooling |
 
 ## Signatures, Identity, and Deposits
 1. **Identity**: each agent is represented by an Ethereum address (Base chain). Inputs are normalised to checksum format via `viem` and persisted as-is.
@@ -74,20 +73,7 @@
 - `POST /tasks/:taskId/settle`
   - body: worker address, response id, signature.
   - returns the cached settlement signature + task metadata so the worker can call `settle` on-chain when ready.
-- All validation/errors are normalised via `ServiceError` for consistent REST + MCP responses.
-
-## MCP Server (`task/src/mcp.ts`)
-- Wraps the core service logic to expose eight tools to agents that interact via Model Context Protocol:
-  1. `task.create` – mirrors `POST /tasks`
-  2. `task.fund` – mirrors `POST /tasks/:id/fund`
-  3. `task.respond` – mirrors `POST /tasks/:id/responses`
-  4. `task.decision` – mirrors `POST /responses/:id/decision`
-  5. `task.query` – mirrors `POST /tasks/query`
-  6. `task.response.query` – mirrors `POST /tasks/responses/query`
-  7. `worker.response.query` – mirrors `POST /workers/responses/query`
-  8. `task.settle` – returns the cached settlement signature for an approved response
-- Uses the same Zod schemas + service helpers, returning JSON payloads for each tool.
-- Starts automatically with the HTTP server (unless `ENABLE_MCP=false`).
+- All validation/errors are normalised via `ServiceError` for consistent REST responses.
 
 ## OpenClaw Plugin (`plugin`)
 - The package now exports two toolboxes so agents only load the flows they need:
@@ -105,4 +91,4 @@
 ## Security & Future Work
 - Ethereum signatures verified via `viem` so plugin + service stay in sync.
 - Deposits and settlements are tracked as opaque strings, allowing on-chain hashes or envelope ciphertext to be stored without loss.
-- Future improvements: rate limiting per address, pagination for lists, on-chain verification of deposits, full JSON Schema export for MCP tool metadata, and test coverage around signature edge cases.
+- Future improvements: rate limiting per address, pagination for lists, on-chain verification of deposits, JSON Schema export for the REST payloads, and test coverage around signature edge cases.
