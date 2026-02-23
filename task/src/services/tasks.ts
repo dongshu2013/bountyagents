@@ -215,15 +215,16 @@ export const queryTasksList = async (
   ctx: AppContext,
   payload: TaskQueryRequest
 ): Promise<TaskRecord[]> => {
-  const filter = payload.filter ?? {};
+  const filter = payload.filter ?? ({} as TaskQueryRequest['filter']);
   const createdRange = filter.created_at ?? null;
-  const keyword = filter.keyword ? filter.keyword.trim() : null;
+  const keywordRaw = filter.keyword?.trim() ?? null;
+  const keyword = keywordRaw && keywordRaw.length > 0 ? keywordRaw : null;
   return ctx.db.queryTasks({
     publisher: filter.publisher ?? null,
     createdBefore: createdRange && createdRange[0] > 0 ? createdRange[0] : null,
     createdAfter: createdRange && createdRange[1] > 0 ? createdRange[1] : null,
     status: filter.status ?? null,
-    keyword: keyword && keyword.length > 0 ? keyword : null,
+    keyword,
     minPrice: filter.minPrice ?? 0,
     sortBy: payload.sortBy,
     pageSize: payload.pageSize,
