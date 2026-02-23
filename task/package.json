@@ -5,11 +5,9 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
-    "prebuild": "pnpm --filter @bountyagents/task-db build",
     "dev": "bash -c 'set -a; source .env.local; set +a; pnpm tsx src/server.ts'",
     "staging": "bash -c 'set -a; source .env.staging; set +a; pnpm tsx src/server.ts'",
     "build": "tsc -b",
-    "prestart": "pnpm build",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
     "test": "vitest run"
