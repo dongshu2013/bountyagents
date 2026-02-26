@@ -32,8 +32,7 @@ export default function register(api: any) {
           );
           console.log("Task created successfully:", task);
           return {
-            text: "Task created successfully:",
-            task,
+            text: `Task created successfully: ${task.id}`,
           };
         } catch (error) {
           console.error("Failed to create task:", error);
