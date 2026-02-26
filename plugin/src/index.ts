@@ -1,8 +1,13 @@
-import { fetch } from 'undici';
-import { z } from 'zod';
-import { TaskRecord, ResponseRecord, taskRecordSchema, responseRecordSchema } from '@bountyagents/task-db';
-import { getAddress, Hex } from 'viem';
-import { Signer } from './signers.js';
+import { fetch } from "undici";
+import { z } from "zod";
+import {
+  TaskRecord,
+  ResponseRecord,
+  taskRecordSchema,
+  responseRecordSchema,
+} from "@bountyagents/task-db";
+import { getAddress, Hex } from "viem";
+import { Signer } from "./signers.js";
 import {
   CancelTaskPayload,
   CreateTaskPayload,
@@ -21,8 +26,8 @@ import {
   submitResponsePayloadSchema,
   taskQueryPayloadSchema,
   taskResponsesQueryPayloadSchema,
-  workerResponsesQueryPayloadSchema
-} from './types.js';
+  workerResponsesQueryPayloadSchema,
+} from "./types.js";
 import {
   cancelTaskSignaturePayload,
   decisionSignaturePayload,
@@ -31,10 +36,10 @@ import {
   taskResponsesQuerySignaturePayload,
   taskSettleSignaturePayload,
   taskSignaturePayload,
-  workerResponsesQuerySignaturePayload
-} from './signing.js';
-import { parseTokenIdentifier } from './token.js';
-import { buildSettleDataHash, taskDepositKey } from './escrow.js';
+  workerResponsesQuerySignaturePayload,
+} from "./signing.js";
+import { parseTokenIdentifier } from "./token.js";
+import { buildSettleDataHash, taskDepositKey } from "./escrow.js";
 
 export interface BountyAgentsPluginOptions {
   serviceUrl: string;
@@ -48,15 +53,17 @@ export interface PluginTool {
   execute: (input: unknown) => Promise<unknown>;
 }
 
-const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+const normalizeUrl = (url: string) => url.replace(/\/$/, "");
 
 const taskResponseSchema = z.object({ task: taskRecordSchema });
 const submissionResponseSchema = z.object({ response: responseRecordSchema });
 const tasksListSchema = z.object({ tasks: z.array(taskRecordSchema) });
-const responsesListSchema = z.object({ responses: z.array(responseRecordSchema) });
+const responsesListSchema = z.object({
+  responses: z.array(responseRecordSchema),
+});
 const settleResponseSchema = z.object({
   task: taskRecordSchema,
-  settlementSignature: z.string()
+  settlementSignature: z.string(),
 });
 
 abstract class BaseBountyPlugin {
@@ -64,7 +71,10 @@ abstract class BaseBountyPlugin {
   protected readonly contractAddress: `0x${string}`;
   private readonly tools: PluginTool[] = [];
 
-  constructor(protected readonly signer: Signer, options: BountyAgentsPluginOptions) {
+  constructor(
+    protected readonly signer: Signer,
+    options: BountyAgentsPluginOptions
+  ) {
     this.baseUrl = normalizeUrl(options.serviceUrl);
     this.contractAddress = getAddress(options.contractAddress as `0x${string}`);
   }
@@ -91,22 +101,27 @@ abstract class BaseBountyPlugin {
       name,
       description,
       inputSchema: schema,
-      execute: (rawInput: unknown) => executor(schema.parse(rawInput))
+      execute: (rawInput: unknown) => executor(schema.parse(rawInput)),
     });
   }
 
-  protected async request(path: string, body?: unknown, method: 'GET' | 'POST' = 'POST'): Promise<unknown> {
+  protected async request(
+    path: string,
+    body?: unknown,
+    method: "GET" | "POST" = "POST"
+  ): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers: {
-        'content-type': 'application/json'
+        "content-type": "application/json",
       },
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? JSON.stringify(body) : undefined,
     });
     const payload = await response.text();
     const data = payload ? JSON.parse(payload) : {};
     if (!response.ok) {
-      const errorMessage = typeof data.message === 'string' ? data.message : response.statusText;
+      const errorMessage =
+        typeof data.message === "string" ? data.message : response.statusText;
       throw new Error(`Service error: ${errorMessage}`);
     }
     return data;
@@ -121,12 +136,16 @@ abstract class BaseBountyPlugin {
   }
 
   protected async fetchTask(taskId: string): Promise<TaskRecord> {
-    const response = await this.request(`/tasks/${taskId}`, undefined, 'GET');
+    const response = await this.request(`/tasks/${taskId}`, undefined, "GET");
     return taskResponseSchema.parse(response).task;
   }
 
   protected async fetchResponse(responseId: string): Promise<ResponseRecord> {
-    const response = await this.request(`/responses/${responseId}`, undefined, 'GET');
+    const response = await this.request(
+      `/responses/${responseId}`,
+      undefined,
+      "GET"
+    );
     return submissionResponseSchema.parse(response).response;
   }
 }
@@ -135,38 +154,38 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
   constructor(signer: Signer, options: BountyAgentsPluginOptions) {
     super(signer, options);
     this.registerTool(
-      'bountyagents.publisher.task.create',
-      'Create a draft bounty task on the remote service',
+      "bountyagents.publisher.task.create",
+      "Create a draft bounty task on the remote service",
       createTaskPayloadSchema,
       (input) => this.createTask(input)
     );
     this.registerTool(
-      'bountyagents.publisher.task.fund',
-      'Attach price/token metadata after depositing escrow funds',
+      "bountyagents.publisher.task.fund",
+      "Attach price/token metadata after depositing escrow funds",
       fundTaskPayloadSchema,
       (input) => this.fundTask(input)
     );
     this.registerTool(
-      'bountyagents.publisher.task.decision',
-      'Approve or reject a response and cache the settlement signature',
+      "bountyagents.publisher.task.decision",
+      "Approve or reject a response and cache the settlement signature",
       decisionPayloadSchema,
       (input) => this.decideOnResponse(input)
     );
     this.registerTool(
-      'bountyagents.publisher.task.cancel',
-      'Cancel an active task and retrieve the admin withdraw signature',
+      "bountyagents.publisher.task.cancel",
+      "Cancel an active task and retrieve the admin withdraw signature",
       cancelTaskPayloadSchema,
       (input) => this.cancelTask(input)
     );
     this.registerTool(
-      'bountyagents.publisher.task.query',
-      'Search tasks with keyword, publisher and price filters',
+      "bountyagents.publisher.task.query",
+      "Search tasks with keyword, publisher and price filters",
       taskQueryPayloadSchema,
       (input) => this.queryTasks(input)
     );
     this.registerTool(
-      'bountyagents.publisher.task.response.query',
-      'List responses for a task (owner signature required)',
+      "bountyagents.publisher.task.response.query",
+      "List responses for a task (owner signature required)",
       taskResponsesQueryPayloadSchema,
       (input) => this.queryTaskResponses(input)
     );
@@ -176,9 +195,9 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
-      signature: await this.signPayload(taskSignaturePayload(payload))
+      signature: await this.signPayload(taskSignaturePayload(payload)),
     };
-    const response = await this.request('/tasks', body);
+    const response = await this.request("/tasks", body);
     return taskResponseSchema.parse(response).task;
   }
 
@@ -186,29 +205,36 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
-      signature: await this.signPayload(taskFundSignaturePayload(payload))
+      signature: await this.signPayload(taskFundSignaturePayload(payload)),
     };
     const response = await this.request(`/tasks/${payload.taskId}/fund`, body);
     return taskResponseSchema.parse(response).task;
   }
 
-  private async decideOnResponse(payload: DecisionPayload): Promise<ResponseRecord> {
+  private async decideOnResponse(
+    payload: DecisionPayload
+  ): Promise<ResponseRecord> {
     const responseRecord = await this.fetchResponse(payload.responseId);
     const task = await this.fetchTask(responseRecord.task_id);
-    if (!task.token || task.price === '0') {
-      throw new Error('Task is not funded yet');
+    if (!task.token || task.price === "0") {
+      throw new Error("Task is not funded yet");
     }
     if (payload.price !== task.price) {
-      throw new Error('Price does not match funded amount');
+      throw new Error("Price does not match funded amount");
     }
     const workerAddress = getAddress(payload.workerAddress as `0x${string}`);
     if (workerAddress !== getAddress(responseRecord.worker as `0x${string}`)) {
-      throw new Error('Worker address mismatch');
+      throw new Error("Worker address mismatch");
     }
 
     const settlementSignature =
-      payload.status === 'approved'
-        ? await this.createSettlementSignature(responseRecord.task_id, workerAddress, payload.price, task.token)
+      payload.status === "approved"
+        ? await this.createSettlementSignature(
+            responseRecord.task_id,
+            workerAddress,
+            payload.price,
+            task.token
+          )
         : undefined;
 
     const canonicalPayload: DecisionPayload = {
@@ -216,14 +242,19 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
       workerAddress,
       price: payload.price,
       status: payload.status,
-      settlementSignature
+      settlementSignature,
     };
     const body = {
       ...canonicalPayload,
       ownerAddress: this.signer.address,
-      signature: await this.signPayload(decisionSignaturePayload(canonicalPayload))
+      signature: await this.signPayload(
+        decisionSignaturePayload(canonicalPayload)
+      ),
     };
-    const response = await this.request(`/responses/${payload.responseId}/decision`, body);
+    const response = await this.request(
+      `/responses/${payload.responseId}/decision`,
+      body
+    );
     return submissionResponseSchema.parse(response).response;
   }
 
@@ -231,43 +262,53 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     const body = {
       ...payload,
       ownerAddress: this.signer.address,
-      signature: await this.signPayload(cancelTaskSignaturePayload(payload))
+      signature: await this.signPayload(cancelTaskSignaturePayload(payload)),
     };
-    const response = await this.request(`/tasks/${payload.taskId}/cancel`, body);
+    const response = await this.request(
+      `/tasks/${payload.taskId}/cancel`,
+      body
+    );
     return taskResponseSchema.parse(response).task;
   }
 
   private async queryTasks(payload: TaskQueryPayload): Promise<TaskRecord[]> {
-    const canonicalFilter = (payload.filter ?? {}) as NonNullable<TaskQueryPayload['filter']>;
+    const canonicalFilter = (payload.filter ?? {}) as NonNullable<
+      TaskQueryPayload["filter"]
+    >;
     const pageSize = payload.pageSize ?? 50;
     const pageNum = payload.pageNum ?? 0;
     const body = {
       filter: canonicalFilter,
-      sortBy: payload.sortBy ?? 'created_at',
+      sortBy: payload.sortBy ?? "created_at",
       pageSize,
-      pageNum
+      pageNum,
     };
-    const response = await this.request('/tasks/query', body);
+    const response = await this.request("/tasks/query", body);
     return tasksListSchema.parse(response).tasks;
   }
 
-  private async queryTaskResponses(payload: TaskResponsesQueryPayload): Promise<ResponseRecord[]> {
+  private async queryTaskResponses(
+    payload: TaskResponsesQueryPayload
+  ): Promise<ResponseRecord[]> {
     const pageSize = payload.pageSize ?? 50;
     const pageNum = payload.pageNum ?? 0;
     const canonicalPayload = {
       taskId: payload.taskId,
       workerAddress: payload.workerAddress,
       pageSize,
-      pageNum
+      pageNum,
     };
     const body = {
       ...canonicalPayload,
       ownerAddress: this.signer.address,
       signature: await this.signPayload(
-        taskResponsesQuerySignaturePayload({ ...canonicalPayload, ownerAddress: this.signer.address })
-      )
+        taskResponsesQuerySignaturePayload({
+          ...canonicalPayload,
+          ownerAddress: this.signer.address,
+        })
+      ),
     };
-    const response = await this.request('/tasks/responses/query', body);
+    const response = await this.request("/tasks/responses/query", body);
     return responsesListSchema.parse(response).responses;
   }
 
@@ -295,61 +336,78 @@ export class BountyAgentsWorkerPlugin extends BaseBountyPlugin {
   constructor(signer: Signer, options: BountyAgentsPluginOptions) {
     super(signer, options);
     this.registerTool(
-      'bountyagents.worker.task.respond',
-      'Submit a response for an active task',
+      "bountyagents.worker.task.respond",
+      "Submit a response for an active task",
       submitResponsePayloadSchema,
       (input) => this.submitResponse(input)
     );
     this.registerTool(
-      'bountyagents.worker.response.query',
-      'List responses submitted by this worker',
+      "bountyagents.worker.response.query",
+      "List responses submitted by this worker",
       workerResponsesQueryPayloadSchema,
       (input) => this.queryWorkerResponses(input)
     );
     this.registerTool(
-      'bountyagents.worker.task.settle',
-      'Fetch settlement signature for an approved response',
+      "bountyagents.worker.task.settle",
+      "Fetch settlement signature for an approved response",
       settleTaskPayloadSchema,
       (input) => this.settleTask(input)
     );
   }
 
-  private async submitResponse(payload: SubmitResponsePayload): Promise<ResponseRecord> {
+  private async submitResponse(
+    payload: SubmitResponsePayload
+  ): Promise<ResponseRecord> {
     const body = {
       ...payload,
       workerAddress: this.signer.address,
-      signature: await this.signPayload(responseSignaturePayload(payload))
+      signature: await this.signPayload(responseSignaturePayload(payload)),
     };
-    const response = await this.request(`/tasks/${payload.taskId}/responses`, body);
+    const response = await this.request(
+      `/tasks/${payload.taskId}/responses`,
+      body
+    );
     return submissionResponseSchema.parse(response).response;
   }
 
-  private async queryWorkerResponses(payload: WorkerResponsesQueryPayload): Promise<ResponseRecord[]> {
+  private async queryWorkerResponses(
+    payload: WorkerResponsesQueryPayload
+  ): Promise<ResponseRecord[]> {
     const pageSize = payload.pageSize ?? 50;
     const pageNum = payload.pageNum ?? 0;
     const canonicalPayload = {
       taskId: payload.taskId,
       pageSize,
-      pageNum
+      pageNum,
     };
     const body = {
       ...canonicalPayload,
       workerAddress: this.signer.address,
       signature: await this.signPayload(
-        workerResponsesQuerySignaturePayload({ ...canonicalPayload, workerAddress: this.signer.address })
-      )
+        workerResponsesQuerySignaturePayload({
+          ...canonicalPayload,
+          workerAddress: this.signer.address,
+        })
+      ),
     };
-    const response = await this.request('/workers/responses/query', body);
+    const response = await this.request("/workers/responses/query", body);
     return responsesListSchema.parse(response).responses;
   }
 
-  private async settleTask(payload: SettleTaskPayload): Promise<{ task: TaskRecord; settlementSignature: string }> {
+  private async settleTask(
+    payload: SettleTaskPayload
+  ): Promise<{ task: TaskRecord; settlementSignature: string }> {
     const canonicalPayload = { ...payload, workerAddress: this.signer.address };
     const body = {
       ...canonicalPayload,
-      signature: await this.signPayload(taskSettleSignaturePayload(canonicalPayload))
+      signature: await this.signPayload(
+        taskSettleSignaturePayload(canonicalPayload)
+      ),
     };
-    const response = await this.request(`/tasks/${payload.taskId}/settle`, body);
+    const response = await this.request(
+      `/tasks/${payload.taskId}/settle`,
+      body
+    );
     return settleResponseSchema.parse(response);
   }
 }

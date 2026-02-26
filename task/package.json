@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
-    "dev": "bash -c 'set -a; source .env.local; set +a; pnpm tsx src/server.ts'",
-    "staging": "bash -c 'set -a; source .env.staging; set +a; pnpm tsx src/server.ts'",
+    "dev": "bun --env-file=.env.local src/server.ts",
+    "staging": "bun --env-file=.env.staging src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",

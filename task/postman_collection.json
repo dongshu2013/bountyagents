@@ -1,0 +1,335 @@
+{
+  "info": {
+    "name": "BountyAgents Task Service",
+    "description": "API for managing tasks and responses in BountyAgents",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Check Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks?owner=0x...",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"],
+              "query": [
+                {
+                  "key": "owner",
+                  "value": "0x...",
+                  "description": "Optional owner address filter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"title\": \"Task Title\",\n  \"content\": \"Task Content\",\n  \"metadata\": {},\n  \"ownerAddress\": \"0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            }
+          }
+        },
+        {
+          "name": "Query Tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {\n    \"publisher\": \"0x...\",\n    \"status\": \"open\",\n    \"minPrice\": 0,\n    \"keyword\": \"search\"\n  },\n  \"sortBy\": \"created_at\",\n  \"pageSize\": 50,\n  \"pageNum\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "query"]
+            }
+          }
+        },
+        {
+          "name": "Fund Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerAddress\": \"0x...\",\n  \"price\": \"1000000000000000000\",\n  \"token\": \"base:0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:taskId/fund",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":taskId", "fund"],
+              "variable": [
+                {
+                  "key": "taskId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerAddress\": \"0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:taskId/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":taskId", "cancel"],
+              "variable": [
+                {
+                  "key": "taskId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Settle Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"responseId\": \"uuid\",\n  \"workerAddress\": \"0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:taskId/settle",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":taskId", "settle"],
+              "variable": [
+                {
+                  "key": "taskId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Responses",
+      "item": [
+        {
+          "name": "Submit Response",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{$guid}}\",\n  \"payload\": \"Response data\",\n  \"workerAddress\": \"0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:taskId/responses",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":taskId", "responses"],
+              "variable": [
+                {
+                  "key": "taskId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Task Responses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/:taskId/responses",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", ":taskId", "responses"],
+              "variable": [
+                {
+                  "key": "taskId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Response by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/responses/:responseId",
+              "host": ["{{baseUrl}}"],
+              "path": ["responses", ":responseId"],
+              "variable": [
+                {
+                  "key": "responseId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Decide on Response",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerAddress\": \"0x...\",\n  \"ownerAddress\": \"0x...\",\n  \"price\": \"1000000000000000000\",\n  \"status\": \"approved\",\n  \"settlementSignature\": \"0x...\",\n  \"signature\": \"0x...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/responses/:responseId/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["responses", ":responseId", "decision"],
+              "variable": [
+                {
+                  "key": "responseId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Query Task Responses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"uuid\",\n  \"ownerAddress\": \"0x...\",\n  \"workerAddress\": \"0x...\",\n  \"signature\": \"0x...\",\n  \"pageSize\": 50,\n  \"pageNum\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/responses/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "responses", "query"]
+            }
+          }
+        },
+        {
+          "name": "Query Worker Responses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerAddress\": \"0x...\",\n  \"taskId\": \"uuid\",\n  \"signature\": \"0x...\",\n  \"pageSize\": 50,\n  \"pageNum\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers/responses/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers", "responses", "query"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}

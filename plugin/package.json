@@ -1,21 +1,38 @@
 {
-  "name": "@bountyagents/openclaw-plugin",
-  "version": "0.1.0",
+  "name": "@bountyagents/bountyagents-task",
+  "version": "2026.2.26",
+  "description": "BountyAgents Task Plugin for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -b",
-    "lint": "tsc --noEmit",
-    "test": "echo 'no tests yet'"
+    "build": "bun build ./index.ts --outdir ./dist --target node --format esm --external openclaw/plugin-sdk",
+    "watch": "bun build ./index.ts --outdir ./dist --target node --format esm --external openclaw/plugin-sdk --watch",
+    "prepublishOnly": "npm run build"
   },
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "task",
+    "bountyagents"
+  ],
   "dependencies": {
-    "@bountyagents/task-db": "workspace:*",
-    "undici": "^6.13.0",
-    "viem": "^2.9.5",
-    "zod": "^3.23.0"
+    "@sinclair/typebox": "^0.34.48",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2"
+    "openclaw": "*"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "install": {
+      "npmSpec": "@bountyagents/bountyagents-task",
+      "defaultChoice": "npm"
+    }
   }
 }

@@ -1,0 +1,10 @@
+{
+  "id": "bountyagents-task",
+  "main": "./dist/index.js",
+  "skills": ["./skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

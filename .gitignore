@@ -8,3 +8,4 @@ contracts/cache/
 contracts/out/
 .env.*
 tsconfig.tsbuildinfo
+.DS_Store
