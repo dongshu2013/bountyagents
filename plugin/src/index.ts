@@ -1,12 +1,7 @@
 import { fetch } from "undici";
 import { z } from "zod";
-import {
-  TaskRecord,
-  ResponseRecord,
-  taskRecordSchema,
-  responseRecordSchema,
-} from "@bountyagents/task-db";
 import { getAddress, Hex } from "viem";
+import { ResponseRecord, TaskRecord, responseRecordSchema, taskRecordSchema } from "./task-db-types.js";
 import { Signer } from "./signers.js";
 import {
   CancelTaskPayload,
@@ -219,8 +214,12 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
     if (!task.token || task.price === "0") {
       throw new Error("Task is not funded yet");
     }
-    if (payload.price !== task.price) {
-      throw new Error("Price does not match funded amount");
+    
+    // Use the price from the task record for the settlement signature
+    const taskPrice = task.price;
+    
+    if (payload.price !== taskPrice) {
+      throw new Error(`Price mismatch: payload price ${payload.price} does not match task price ${taskPrice}`);
     }
     const workerAddress = getAddress(payload.workerAddress as `0x${string}`);
     if (workerAddress !== getAddress(responseRecord.worker as `0x${string}`)) {
@@ -232,23 +231,26 @@ export class BountyAgentsPublisherPlugin extends BaseBountyPlugin {
         ? await this.createSettlementSignature(
             responseRecord.task_id,
             workerAddress,
-            payload.price,
+            taskPrice,
             task.token
           )
         : undefined;
 
-    const canonicalPayload: DecisionPayload = {
+    const body = {
       responseId: payload.responseId,
       workerAddress,
       price: payload.price,
       status: payload.status,
       settlementSignature,
-    };
-    const body = {
-      ...canonicalPayload,
       ownerAddress: this.signer.address,
       signature: await this.signPayload(
-        decisionSignaturePayload(canonicalPayload)
+        decisionSignaturePayload({
+          responseId: payload.responseId,
+          workerAddress,
+          price: payload.price,
+          status: payload.status,
+          settlementSignature,
+        })
       ),
     };
     const response = await this.request(
@@ -348,11 +350,27 @@ export class BountyAgentsWorkerPlugin extends BaseBountyPlugin {
       (input) => this.queryWorkerResponses(input)
     );
     this.registerTool(
-      "bountyagents.worker.task.settle",
-      "Fetch settlement signature for an approved response",
-      settleTaskPayloadSchema,
-      (input) => this.settleTask(input)
+      "bountyagents.worker.task.query",
+      "Search tasks with keyword, publisher and price filters",
+      taskQueryPayloadSchema,
+      (input) => this.queryTasks(input)
     );
+  }
+
+  private async queryTasks(payload: TaskQueryPayload): Promise<TaskRecord[]> {
+    const canonicalFilter = (payload.filter ?? {}) as NonNullable<
+      TaskQueryPayload["filter"]
+    >;
+    const pageSize = payload.pageSize ?? 50;
+    const pageNum = payload.pageNum ?? 0;
+    const body = {
+      filter: canonicalFilter,
+      sortBy: payload.sortBy ?? "created_at",
+      pageSize,
+      pageNum,
+    };
+    const response = await this.request("/tasks/query", body);
+    return tasksListSchema.parse(response).tasks;
   }
 
   private async submitResponse(

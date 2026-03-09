@@ -57,7 +57,7 @@ export const createTask = async (ctx: AppContext, payload: CreateTaskRequest): P
 
   const ownerAddress = normalizeAddress(payload.ownerAddress);
   const id = payload.id;
-  return ctx.db.createTask({
+  const task = await ctx.db.createTask({
     id,
     title: payload.title,
     content: payload.content,
@@ -67,6 +67,11 @@ export const createTask = async (ctx: AppContext, payload: CreateTaskRequest): P
     token: null,
     withdraw_signature: null
   });
+
+  // Award 10 points to publisher
+  await ctx.db.incrementUserPoints(ownerAddress, 10);
+
+  return task;
 };
 
 export const fundTask = async (ctx: AppContext, payload: TaskFundingRequest): Promise<TaskRecord> => {
@@ -108,15 +113,12 @@ export const fundTask = async (ctx: AppContext, payload: TaskFundingRequest): Pr
     throw new ServiceError(400, 'invalid_request', 'On-chain token mismatch');
   }
 
-  const expectedAmount = BigInt(payload.price);
+  const expectedAmount = onChain.amountLocked;
   if (expectedAmount <= 0n) {
     throw new ServiceError(400, 'invalid_request', 'Price must be greater than zero');
   }
-  if (onChain.amountLocked !== expectedAmount) {
-    throw new ServiceError(400, 'invalid_request', 'On-chain amount mismatch');
-  }
 
-  const updated = await ctx.db.markTaskFunded(payload.taskId, payload.price, payload.token);
+  const updated = await ctx.db.markTaskFunded(payload.taskId, expectedAmount.toString(), payload.token);
   if (!updated) {
     throw new ServiceError(500, 'internal_error', 'Failed to update task funding info');
   }
@@ -140,13 +142,18 @@ export const submitTaskResponse = async (
   assertSignature(verified);
 
   const workerAddress = normalizeAddress(payload.workerAddress);
-  return ctx.db.createResponse({
+  const response = await ctx.db.createResponse({
     id: payload.id ?? uuidv4(),
     task_id: payload.taskId,
     payload: payload.payload,
     worker: workerAddress,
     settlement_signature: null
   });
+  
+  // Update task status to pending_review
+  await ctx.db.updateTaskStatus(payload.taskId, 'pending_review' as any);
+  
+  return response;
 };
 
 export const decideOnResponse = async (
@@ -204,6 +211,10 @@ export const decideOnResponse = async (
   }
   if (payload.status === 'approved') {
     await ctx.db.updateTaskStatus(task.id, 'finished');
+    // Award 50 points to worker on approval
+    await ctx.db.incrementUserPoints(workerAddress, 50);
+  } else if (payload.status === 'rejected') {
+    await ctx.db.updateTaskStatus(task.id, 'active');
   }
   return updated;
 };
@@ -211,7 +222,7 @@ export const decideOnResponse = async (
 export const queryTasksList = async (
   ctx: AppContext,
   payload: TaskQueryRequest
-): Promise<TaskRecord[]> => {
+): Promise<{ tasks: TaskRecord[]; totalCount: number }> => {
   const filter: TaskQueryFilterRequest = (payload.filter ?? {}) as TaskQueryFilterRequest;
   const createdRange =
     Array.isArray(filter.created_at) && filter.created_at.length === 2 ? filter.created_at : null;

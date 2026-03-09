@@ -14,14 +14,18 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TaskDb = exports.responseRecordSchema = exports.taskRecordSchema = exports.responseStatusSchema = exports.taskStatusSchema = void 0;
+exports.TaskDb = exports.responseRecordSchema = exports.taskRecordSchema = exports.userRecordSchema = exports.responseStatusSchema = exports.taskStatusSchema = void 0;
 const pg_1 = require("pg");
 const node_postgres_1 = require("drizzle-orm/node-postgres");
 const drizzle_orm_1 = require("drizzle-orm");
 const zod_1 = require("zod");
 const schema_js_1 = require("./schema.js");
-exports.taskStatusSchema = zod_1.z.enum(['finished', 'draft', 'active', 'closed']);
+exports.taskStatusSchema = zod_1.z.enum(['finished', 'draft', 'active', 'closed', 'pending_review']);
 exports.responseStatusSchema = zod_1.z.enum(['pending', 'approved', 'rejected']);
+exports.userRecordSchema = zod_1.z.object({
+    address: zod_1.z.string(),
+    points: zod_1.z.number()
+});
 exports.taskRecordSchema = zod_1.z.object({
     id: zod_1.z.string().uuid(),
     title: zod_1.z.string().max(255),
@@ -46,11 +50,13 @@ exports.responseRecordSchema = zod_1.z.object({
 const nowEpoch = () => Date.now();
 const parseTaskRow = (row) => exports.taskRecordSchema.parse({
     ...row,
+    created_at: typeof row.created_at === 'string' ? Number(row.created_at) : row.created_at,
     token: row.token ?? null,
     withdraw_signature: row.withdraw_signature ?? null
 });
 const parseResponseRow = (row) => exports.responseRecordSchema.parse({
     ...row,
+    created_at: typeof row.created_at === 'string' ? Number(row.created_at) : row.created_at,
     settlement: row.settlement ?? null,
     settlement_signature: row.settlement_signature ?? null
 });
@@ -97,6 +103,11 @@ class TaskDb {
         ADD COLUMN IF NOT EXISTS withdraw_signature TEXT;
       ALTER TABLE responses
         ADD COLUMN IF NOT EXISTS settlement_signature TEXT;
+
+      CREATE TABLE IF NOT EXISTS users (
+        address VARCHAR(255) PRIMARY KEY,
+        points BIGINT NOT NULL DEFAULT 0
+      );
     `);
     }
     static normalizePagination(pageSize = 50, pageNum = 0) {
@@ -169,8 +180,13 @@ class TaskDb {
             ? (0, drizzle_orm_1.sql) `ORDER BY (COALESCE(NULLIF(price, ''), '0'))::numeric DESC`
             : (0, drizzle_orm_1.sql) `ORDER BY created_at DESC`;
         const query = (0, drizzle_orm_1.sql) `SELECT * FROM tasks ${whereClause} ${orderClause} LIMIT ${limit} OFFSET ${offset}`;
-        const result = await this.db.execute(query);
-        return result.rows.map(parseTaskRow);
+        const countQuery = (0, drizzle_orm_1.sql) `SELECT COUNT(*) FROM tasks ${whereClause}`;
+        const [result, countResult] = await Promise.all([
+            this.db.execute(query),
+            this.db.execute(countQuery)
+        ]);
+        const totalCount = Number(countResult.rows[0].count);
+        return { tasks: result.rows.map(parseTaskRow), totalCount };
     }
     async createResponse(input) {
         const created_at = input.created_at ?? nowEpoch();
@@ -254,6 +270,34 @@ class TaskDb {
             .where((0, drizzle_orm_1.eq)(schema_js_1.tasks.id, taskId))
             .returning();
         return record ? parseTaskRow(record) : null;
+    }
+    async incrementUserPoints(address, points) {
+        const [record] = await this.db
+            .insert(schema_js_1.users)
+            .values({ address, points })
+            .onConflictDoUpdate({
+            target: schema_js_1.users.address,
+            set: { points: (0, drizzle_orm_1.sql) `users.points + ${points}` }
+        })
+            .returning();
+        return record;
+    }
+    async getUser(address) {
+        const [record] = await this.db.select().from(schema_js_1.users).where((0, drizzle_orm_1.eq)(schema_js_1.users.address, address));
+        return record ?? null;
+    }
+    async getTaskStats() {
+        const activeQuery = (0, drizzle_orm_1.sql) `SELECT COUNT(*), SUM((COALESCE(NULLIF(price, ''), '0'))::numeric) FROM tasks WHERE status = 'active'`;
+        const finishedQuery = (0, drizzle_orm_1.sql) `SELECT COUNT(*) FROM tasks WHERE status = 'finished'`;
+        const [activeResult, finishedResult] = await Promise.all([
+            this.db.execute(activeQuery),
+            this.db.execute(finishedQuery)
+        ]);
+        return {
+            activeCount: Number(activeResult.rows[0]?.count || 0),
+            totalActivePrice: activeResult.rows[0]?.sum?.toString() || '0',
+            finishedCount: Number(finishedResult.rows[0]?.count || 0)
+        };
     }
 }
 exports.TaskDb = TaskDb;

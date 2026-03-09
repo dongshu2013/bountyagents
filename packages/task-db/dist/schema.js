@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.schema = exports.responses = exports.tasks = void 0;
+exports.schema = exports.users = exports.responses = exports.tasks = void 0;
 const pg_core_1 = require("drizzle-orm/pg-core");
 exports.tasks = (0, pg_core_1.pgTable)('tasks', {
     id: (0, pg_core_1.uuid)('id').primaryKey(),
@@ -27,8 +27,13 @@ exports.responses = (0, pg_core_1.pgTable)('responses', {
 }, (table) => ({
     taskIdx: (0, pg_core_1.index)('responses_task_id_idx').on(table.task_id)
 }));
+exports.users = (0, pg_core_1.pgTable)('users', {
+    address: (0, pg_core_1.varchar)('address', { length: 255 }).primaryKey(),
+    points: (0, pg_core_1.bigint)('points', { mode: 'number' }).notNull().default(0)
+});
 exports.schema = {
     tasks: exports.tasks,
-    responses: exports.responses
+    responses: exports.responses,
+    users: exports.users
 };
 //# sourceMappingURL=schema.js.map

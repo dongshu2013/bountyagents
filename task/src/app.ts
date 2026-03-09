@@ -6,6 +6,7 @@ import {
   decisionSchema,
   submitResponseSchema,
   taskQuerySchema,
+  taskQueryFilterSchema,
   taskResponsesQuerySchema,
   workerResponsesQuerySchema,
   taskCancelSchema,
@@ -25,6 +26,7 @@ import {
   settleTask,
   fundTask
 } from './services/tasks.js';
+import { normalizeAddress } from './crypto.js';
 
 const idParamSchema = z.object({ id: z.string().uuid() });
 const taskIdParamSchema = z.object({ taskId: z.string().uuid() });
@@ -54,10 +56,26 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
     depositNetwork: config.depositNetwork
   }));
 
+  app.get('/task-stats', async () => {
+    const stats = await db.getTaskStats();
+    return {
+      activeCount: stats.activeCount,
+      totalActivePrice: stats.totalActivePrice,
+      pointsAvailable: stats.activeCount * 50,
+      finishedCount: stats.finishedCount
+    };
+  });
+
   app.get('/tasks', async (request, reply) => {
     const owner = typeof request.query === 'object' ? (request.query as any).owner : undefined;
-    const tasks = await db.listTasks(owner);
-    reply.send({ tasks });
+    const status = typeof request.query === 'object' ? (request.query as any).status : undefined;
+    
+    const filterParams: any = {};
+    if (owner !== undefined) filterParams.publisher = owner;
+    if (status !== undefined) filterParams.status = status;
+    
+    const { tasks, totalCount } = await db.queryTasks(filterParams);
+    reply.send({ tasks, totalCount });
   });
 
   app.get('/tasks/:id', async (request, reply) => {
@@ -95,8 +113,8 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
   app.post('/tasks/query', async (request, reply) => {
     const payload = taskQuerySchema.parse(request.body ?? {});
     try {
-      const tasks = await queryTasksList({ config, db }, payload);
-      return reply.send({ tasks });
+      const { tasks, totalCount } = await queryTasksList({ config, db }, payload);
+      return reply.send({ tasks, totalCount });
     } catch (error) {
       if (handleServiceError(reply, error)) return;
       throw error;
@@ -190,6 +208,15 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
       if (handleServiceError(reply, error)) return;
       throw error;
     }
+  });
+
+  app.get('/users/:address', async (request, reply) => {
+    const { address } = z.object({ address: z.string() }).parse(request.params);
+    const user = await db.getUser(normalizeAddress(address));
+    if (!user) {
+      return reply.send({ address: normalizeAddress(address), points: 0 });
+    }
+    return reply.send(user);
   });
 
   app.setErrorHandler((error, request, reply) => {

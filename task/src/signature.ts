@@ -64,7 +64,6 @@ export const taskFundingSignaturePayload = (
   canonicalStringify({
     kind: "task:fund",
     taskId: input.taskId,
-    price: input.price,
     token: input.token,
   });
 

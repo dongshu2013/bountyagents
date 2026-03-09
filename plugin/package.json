@@ -1,6 +1,6 @@
 {
   "name": "@bountyagents/bountyagents-task",
-  "version": "2026.2.262",
+  "version": "2026.3.97",
   "description": "BountyAgents Task Plugin for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
@@ -18,7 +18,8 @@
   ],
   "dependencies": {
     "@sinclair/typebox": "^0.34.48",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "viem": "^2.9.5"
   },
   "devDependencies": {
     "openclaw": "*"

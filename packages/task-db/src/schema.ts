@@ -34,7 +34,16 @@ export const responses = pgTable(
   })
 );
 
+export const users = pgTable(
+  'users',
+  {
+    address: varchar('address', { length: 255 }).primaryKey(),
+    points: bigint('points', { mode: 'number' }).notNull().default(0)
+  }
+);
+
 export const schema = {
   tasks,
-  responses
+  responses,
+  users
 };

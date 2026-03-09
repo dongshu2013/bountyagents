@@ -2,3 +2,4 @@ packages:
   - plugin
   - task
   - packages/*
+  - upclaw-dashboard

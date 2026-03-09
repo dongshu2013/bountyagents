@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { responseStatusSchema, taskStatusSchema } from '@bountyagents/task-db';
+import { responseStatusSchema, taskStatusSchema } from './task-db-types.js';
 import { getAddress, isAddress } from 'viem';
 
 const addressSchema = z
@@ -25,7 +25,6 @@ export const createTaskPayloadSchema = z.object({
 
 export const fundTaskPayloadSchema = z.object({
   taskId: z.string().uuid(),
-  price: priceStringSchema,
   token: tokenSchema
 });
 
@@ -45,9 +44,6 @@ export const decisionPayloadSchema = z
   })
   .refine((value) => value.status !== 'pending', {
     message: 'Status must be approved or rejected'
-  })
-  .refine((value) => (value.status === 'approved' ? Boolean(value.settlementSignature) : true), {
-    message: 'settlementSignature required when approving'
   });
 
 export const cancelTaskPayloadSchema = z.object({

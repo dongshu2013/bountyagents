@@ -2,13 +2,19 @@ import { Pool, PoolConfig } from 'pg';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { SQL, and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { responses, schema, tasks } from './schema.js';
+import { responses, schema, tasks, users } from './schema.js';
 
-export const taskStatusSchema = z.enum(['finished', 'draft', 'active', 'closed']);
+export const taskStatusSchema = z.enum(['finished', 'draft', 'active', 'closed', 'pending_review']);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
 export const responseStatusSchema = z.enum(['pending', 'approved', 'rejected']);
 export type ResponseStatus = z.infer<typeof responseStatusSchema>;
+
+export const userRecordSchema = z.object({
+  address: z.string(),
+  points: z.number()
+});
+export type UserRecord = z.infer<typeof userRecordSchema>;
 
 export const taskRecordSchema = z.object({
   id: z.string().uuid(),
@@ -78,12 +84,14 @@ const nowEpoch = (): number => Date.now();
 const parseTaskRow = (row: any): TaskRecord =>
   taskRecordSchema.parse({
     ...row,
+    created_at: typeof row.created_at === 'string' ? Number(row.created_at) : row.created_at,
     token: row.token ?? null,
     withdraw_signature: row.withdraw_signature ?? null
   });
 const parseResponseRow = (row: any): ResponseRecord =>
   responseRecordSchema.parse({
     ...row,
+    created_at: typeof row.created_at === 'string' ? Number(row.created_at) : row.created_at,
     settlement: row.settlement ?? null,
     settlement_signature: row.settlement_signature ?? null
   });
@@ -134,6 +142,11 @@ export class TaskDb {
         ADD COLUMN IF NOT EXISTS withdraw_signature TEXT;
       ALTER TABLE responses
         ADD COLUMN IF NOT EXISTS settlement_signature TEXT;
+
+      CREATE TABLE IF NOT EXISTS users (
+        address VARCHAR(255) PRIMARY KEY,
+        points BIGINT NOT NULL DEFAULT 0
+      );
     `);
   }
 
@@ -185,7 +198,7 @@ export class TaskDb {
     return record ? parseTaskRow(record) : null;
   }
 
-  async queryTasks(filters: TaskQueryFilters): Promise<TaskRecord[]> {
+  async queryTasks(filters: TaskQueryFilters): Promise<{ tasks: TaskRecord[]; totalCount: number }> {
     const { limit, offset } = TaskDb.normalizePagination(filters.pageSize, filters.pageNum);
     const whereClauses: any[] = [];
     if (filters.publisher) {
@@ -215,8 +228,13 @@ export class TaskDb {
         ? sql`ORDER BY (COALESCE(NULLIF(price, ''), '0'))::numeric DESC`
         : sql`ORDER BY created_at DESC`;
     const query = sql`SELECT * FROM tasks ${whereClause} ${orderClause} LIMIT ${limit} OFFSET ${offset}`;
-    const result = await this.db.execute(query);
-    return result.rows.map(parseTaskRow);
+    const countQuery = sql`SELECT COUNT(*) FROM tasks ${whereClause}`;
+    const [result, countResult] = await Promise.all([
+      this.db.execute(query),
+      this.db.execute(countQuery)
+    ]);
+    const totalCount = Number(countResult.rows[0].count);
+    return { tasks: result.rows.map(parseTaskRow), totalCount };
   }
 
   async createResponse(input: NewResponseInput): Promise<ResponseRecord> {
@@ -319,6 +337,39 @@ export class TaskDb {
       .where(eq(tasks.id, taskId))
       .returning();
     return record ? parseTaskRow(record) : null;
+  }
+
+  async incrementUserPoints(address: string, points: number): Promise<UserRecord> {
+    const [record] = await this.db
+      .insert(users)
+      .values({ address, points })
+      .onConflictDoUpdate({
+        target: users.address,
+        set: { points: sql`users.points + ${points}` }
+      })
+      .returning();
+    return record;
+  }
+
+  async getUser(address: string): Promise<UserRecord | null> {
+    const [record] = await this.db.select().from(users).where(eq(users.address, address));
+    return record ?? null;
+  }
+
+  async getTaskStats(): Promise<{ activeCount: number; totalActivePrice: string; finishedCount: number }> {
+    const activeQuery = sql`SELECT COUNT(*), SUM((COALESCE(NULLIF(price, ''), '0'))::numeric) FROM tasks WHERE status = 'active'`;
+    const finishedQuery = sql`SELECT COUNT(*) FROM tasks WHERE status = 'finished'`;
+
+    const [activeResult, finishedResult] = await Promise.all([
+      this.db.execute(activeQuery),
+      this.db.execute(finishedQuery)
+    ]);
+
+    return {
+      activeCount: Number(activeResult.rows[0]?.count || 0),
+      totalActivePrice: activeResult.rows[0]?.sum?.toString() || '0',
+      finishedCount: Number(finishedResult.rows[0]?.count || 0)
+    };
   }
 }
 

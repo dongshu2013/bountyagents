@@ -216,6 +216,37 @@ export declare const responses: import("drizzle-orm/pg-core").PgTableWithColumns
     };
     dialect: "pg";
 }>;
+export declare const users: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "users";
+    schema: undefined;
+    columns: {
+        address: import("drizzle-orm/pg-core").PgColumn<{
+            name: "address";
+            tableName: "users";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+        }, {}, {}>;
+        points: import("drizzle-orm/pg-core").PgColumn<{
+            name: "points";
+            tableName: "users";
+            dataType: "number";
+            columnType: "PgBigInt53";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            enumValues: undefined;
+            baseColumn: never;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
 export declare const schema: {
     tasks: import("drizzle-orm/pg-core").PgTableWithColumns<{
         name: "tasks";
@@ -430,6 +461,37 @@ export declare const schema: {
                 notNull: false;
                 hasDefault: false;
                 enumValues: [string, ...string[]];
+                baseColumn: never;
+            }, {}, {}>;
+        };
+        dialect: "pg";
+    }>;
+    users: import("drizzle-orm/pg-core").PgTableWithColumns<{
+        name: "users";
+        schema: undefined;
+        columns: {
+            address: import("drizzle-orm/pg-core").PgColumn<{
+                name: "address";
+                tableName: "users";
+                dataType: "string";
+                columnType: "PgVarchar";
+                data: string;
+                driverParam: string;
+                notNull: true;
+                hasDefault: false;
+                enumValues: [string, ...string[]];
+                baseColumn: never;
+            }, {}, {}>;
+            points: import("drizzle-orm/pg-core").PgColumn<{
+                name: "points";
+                tableName: "users";
+                dataType: "number";
+                columnType: "PgBigInt53";
+                data: number;
+                driverParam: string | number;
+                notNull: true;
+                hasDefault: true;
+                enumValues: undefined;
                 baseColumn: never;
             }, {}, {}>;
         };

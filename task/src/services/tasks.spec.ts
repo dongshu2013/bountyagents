@@ -79,7 +79,8 @@ const makeContext = () => {
     storeWithdrawSignature: vi.fn(),
     queryTasks: vi.fn(),
     listResponsesForTaskPaginated: vi.fn(),
-    listResponsesByWorker: vi.fn()
+    listResponsesByWorker: vi.fn(),
+    incrementUserPoints: vi.fn()
   };
   const ctx: AppContext = {
     config: baseConfig,
@@ -147,7 +148,6 @@ describe('fundTask', () => {
     const payload = {
       taskId: sampleTask.id,
       ownerAddress: sampleTask.owner,
-      price: '100',
       token: 'bsc-testnet:0x9999999999999999999999999999999999999999',
       signature: '0xfund'
     };
@@ -165,7 +165,6 @@ describe('fundTask', () => {
     const mismatchedPayload = {
       taskId: sampleTask.id,
       ownerAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-      price: '100',
       token: 'bsc-testnet:0x9999999999999999999999999999999999999999',
       signature: '0xfund'
     };
@@ -175,20 +174,19 @@ describe('fundTask', () => {
     expect(db.markTaskFunded).not.toHaveBeenCalled();
   });
 
-  it('throws when on-chain amount mismatches payload', async () => {
+  it('throws when on-chain amount is zero', async () => {
     const { ctx, db } = makeContext();
     db.getTaskById.mockResolvedValue({ ...sampleTask });
     fetchDepositInfoMock.mockResolvedValue({
       owner: sampleTask.owner,
       token: '0x9999999999999999999999999999999999999999',
-      amountLocked: BigInt(50),
+      amountLocked: BigInt(0),
       released: false
     });
 
     const payload = {
       taskId: sampleTask.id,
       ownerAddress: sampleTask.owner,
-      price: '100',
       token: 'bsc-testnet:0x9999999999999999999999999999999999999999',
       signature: '0xfund'
     };
@@ -205,7 +203,6 @@ describe('fundTask', () => {
       fundTask(ctx, {
         taskId: sampleTask.id,
         ownerAddress: sampleTask.owner,
-        price: '100',
         token: 'bsc-testnet:0x9999999999999999999999999999999999999999',
         signature: '0xfund'
       })
@@ -337,7 +334,7 @@ describe('decideOnResponse', () => {
     const result = await decideOnResponse(ctx, payload);
 
     expect(result.status).toBe('rejected');
-    expect(db.updateTaskStatus).not.toHaveBeenCalled();
+    expect(db.updateTaskStatus).toHaveBeenCalledWith(sampleTask.id, 'active');
   });
 
   it('throws when decision signature is invalid', async () => {
@@ -429,21 +426,21 @@ describe('cancelTask', () => {
 describe('query helpers', () => {
   it('returns tasks from db query', async () => {
     const { ctx, db } = makeContext();
-    db.queryTasks.mockResolvedValue([sampleTask]);
+    db.queryTasks.mockResolvedValue({ tasks: [sampleTask], totalCount: 1 });
 
-    const result = await queryTasksList(ctx, { filter: {}, sortBy: 'created_at', pageNum: 0, pageSize: 10 });
+    const result = await queryTasksList(ctx, { filter: { minPrice: 0 }, sortBy: 'created_at', pageNum: 0, pageSize: 10 });
 
-    expect(result).toEqual([sampleTask]);
+    expect(result).toEqual({ tasks: [sampleTask], totalCount: 1 });
   });
 
   it('forwards filters and pagination to the db query', async () => {
     const { ctx, db } = makeContext();
-    db.queryTasks.mockResolvedValue([sampleTask]);
+    db.queryTasks.mockResolvedValue({ tasks: [sampleTask], totalCount: 1 });
 
     const filterPayload = {
       filter: {
-        publisher: '0xabc',
-        status: 'active',
+        publisher: '0xabc' as `0x${string}`,
+        status: 'active' as const,
         created_at: [2000, 1000] as [number, number],
         keyword: '  bounty ',
         minPrice: 50
@@ -466,7 +463,7 @@ describe('query helpers', () => {
       pageSize: 25,
       pageNum: 2
     });
-    expect(result).toEqual([sampleTask]);
+    expect(result).toEqual({ tasks: [sampleTask], totalCount: 1 });
   });
 
   it('lists responses for an owner', async () => {

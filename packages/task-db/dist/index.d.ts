@@ -1,36 +1,47 @@
 import { Pool, PoolConfig } from 'pg';
 import { z } from 'zod';
-export declare const taskStatusSchema: z.ZodEnum<["finished", "draft", "active", "closed"]>;
+export declare const taskStatusSchema: z.ZodEnum<["finished", "draft", "active", "closed", "pending_review"]>;
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export declare const responseStatusSchema: z.ZodEnum<["pending", "approved", "rejected"]>;
 export type ResponseStatus = z.infer<typeof responseStatusSchema>;
+export declare const userRecordSchema: z.ZodObject<{
+    address: z.ZodString;
+    points: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    address: string;
+    points: number;
+}, {
+    address: string;
+    points: number;
+}>;
+export type UserRecord = z.infer<typeof userRecordSchema>;
 export declare const taskRecordSchema: z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
     owner: z.ZodString;
     created_at: z.ZodNumber;
-    status: z.ZodEnum<["finished", "draft", "active", "closed"]>;
+    status: z.ZodEnum<["finished", "draft", "active", "closed", "pending_review"]>;
     price: z.ZodString;
     token: z.ZodNullable<z.ZodString>;
     withdraw_signature: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    status: "finished" | "draft" | "active" | "closed" | "pending_review";
     id: string;
     title: string;
     content: string;
     owner: string;
     created_at: number;
-    status: "draft" | "finished" | "active" | "closed";
     price: string;
     token: string | null;
     withdraw_signature: string | null;
 }, {
+    status: "finished" | "draft" | "active" | "closed" | "pending_review";
     id: string;
     title: string;
     content: string;
     owner: string;
     created_at: number;
-    status: "draft" | "finished" | "active" | "closed";
     price: string;
     token: string | null;
     withdraw_signature: string | null;
@@ -46,18 +57,18 @@ export declare const responseRecordSchema: z.ZodObject<{
     settlement: z.ZodNullable<z.ZodString>;
     settlement_signature: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    status: "pending" | "approved" | "rejected";
     id: string;
     created_at: number;
-    status: "pending" | "approved" | "rejected";
     task_id: string;
     payload: string;
     worker: string;
     settlement: string | null;
     settlement_signature: string | null;
 }, {
+    status: "pending" | "approved" | "rejected";
     id: string;
     created_at: number;
-    status: "pending" | "approved" | "rejected";
     task_id: string;
     payload: string;
     worker: string;
@@ -108,7 +119,10 @@ export declare class TaskDb {
     getTaskById(id: string): Promise<TaskRecord | null>;
     listTasks(owner?: string): Promise<TaskRecord[]>;
     updateTaskStatus(id: string, status: TaskStatus): Promise<TaskRecord | null>;
-    queryTasks(filters: TaskQueryFilters): Promise<TaskRecord[]>;
+    queryTasks(filters: TaskQueryFilters): Promise<{
+        tasks: TaskRecord[];
+        totalCount: number;
+    }>;
     createResponse(input: NewResponseInput): Promise<ResponseRecord>;
     getResponseById(id: string): Promise<ResponseRecord | null>;
     listResponsesForTask(taskId: string): Promise<ResponseRecord[]>;
@@ -117,6 +131,13 @@ export declare class TaskDb {
     updateResponseStatus(responseId: string, status: ResponseStatus, settlement?: string | null, settlementSignature?: string | null): Promise<ResponseRecord | null>;
     markTaskFunded(taskId: string, price: string, token: string): Promise<TaskRecord | null>;
     storeWithdrawSignature(taskId: string, signature: string): Promise<TaskRecord | null>;
+    incrementUserPoints(address: string, points: number): Promise<UserRecord>;
+    getUser(address: string): Promise<UserRecord | null>;
+    getTaskStats(): Promise<{
+        activeCount: number;
+        totalActivePrice: string;
+        finishedCount: number;
+    }>;
 }
 export type TaskDbPool = Pool;
 export * from './schema.js';

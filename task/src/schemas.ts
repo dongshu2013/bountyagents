@@ -32,7 +32,6 @@ export const createTaskRequestSchema = z.object({
 export const taskFundingSchema = z.object({
   taskId: z.string().uuid(),
   ownerAddress: addressSchema,
-  price: priceStringSchema,
   token: tokenSchema,
   signature: z.string()
 });
@@ -81,13 +80,13 @@ const createdRangeSchema = z
   .optional()
   .nullable();
 
-const taskQueryFilterSchema = z.object({
-  publisher: addressSchema.optional().nullable(),
-  created_at: createdRangeSchema,
-  status: taskStatusSchema.optional().nullable(),
-  minPrice: z.number().int().nonnegative().optional().default(0),
-  keyword: z.string().min(2).max(256).optional().nullable()
-});
+  export const taskQueryFilterSchema = z.object({
+    publisher: addressSchema.optional().nullable(),
+    created_at: createdRangeSchema,
+    status: taskStatusSchema.optional().nullable(),
+    minPrice: z.preprocess((val) => (typeof val === 'string' ? parseInt(val, 10) : val), z.number().int().nonnegative().optional().default(0)),
+    keyword: z.string().min(2).max(256).optional().nullable()
+  });
 
 export const taskQuerySchema = z.object({
   filter: taskQueryFilterSchema.default({}),

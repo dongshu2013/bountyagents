@@ -55,6 +55,7 @@ export const taskDepositKey = (taskId: string): Hex => {
 };
 
 export const fetchDepositInfo = async (config: ServiceConfig, key: Hex): Promise<EscrowDepositInfo> => {
+  console.log(`Fetching deposit info for key ${key}...`);
   const client = getClient(config);
   const [owner, token, amountLocked, released] = await client.readContract({
     address: getAddress(config.contractAddress),
@@ -62,5 +63,6 @@ export const fetchDepositInfo = async (config: ServiceConfig, key: Hex): Promise
     functionName: 'getDeposit',
     args: [key]
   });
+  console.log(`Deposit info: ${owner}, ${token}, ${amountLocked}, ${released}`);
   return { owner, token, amountLocked, released };
 };
