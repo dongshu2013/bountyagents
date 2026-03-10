@@ -43,6 +43,15 @@ export default function Bounties() {
     fullId: string;
     status: string;
   }>({ open: false, id: "", fullId: "", status: "" });
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedStates((prev) => ({ ...prev, [id]: true }));
+    setTimeout(() => {
+      setCopiedStates((prev) => ({ ...prev, [id]: false }));
+    }, 2000);
+  };
 
   const { data: statsData } = useQuery({
     queryKey: ["task-stats"],
