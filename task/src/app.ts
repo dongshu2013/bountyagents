@@ -11,7 +11,8 @@ import {
   workerResponsesQuerySchema,
   taskCancelSchema,
   taskSettleSchema,
-  taskFundingSchema
+  taskFundingSchema,
+  requestTokenSchema
 } from './schemas.js';
 import { AppContext } from './context.js';
 import {
@@ -26,6 +27,7 @@ import {
   settleTask,
   fundTask
 } from './services/tasks.js';
+import { requestToken } from './services/auth.js';
 import { normalizeAddress } from './crypto.js';
 
 const idParamSchema = z.object({ id: z.string().uuid() });
@@ -217,6 +219,17 @@ export const buildApp = ({ config, db }: AppContext): FastifyInstance => {
       return reply.send({ address: normalizeAddress(address), points: 0 });
     }
     return reply.send(user);
+  });
+
+  app.post('/request-token', async (request, reply) => {
+    const payload = requestTokenSchema.parse(request.body);
+    try {
+      const result = await requestToken({ config, db }, payload);
+      return reply.send(result);
+    } catch (error) {
+      if (handleServiceError(reply, error)) return;
+      throw error;
+    }
   });
 
   app.setErrorHandler((error, request, reply) => {

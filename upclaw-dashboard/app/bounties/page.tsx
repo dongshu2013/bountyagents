@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pagination } from "../../components/Pagination";
+import { SendToOpenClawDialog } from "../../components/SendToOpenClawDialog";
 
 const timeAgo = (timestamp: number) => {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -42,18 +43,6 @@ export default function Bounties() {
     fullId: string;
     status: string;
   }>({ open: false, id: "", fullId: "", status: "" });
-  const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>(
-    {}
-  );
-
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedStates((prev) => ({ ...prev, [id]: true }));
-      setTimeout(() => {
-        setCopiedStates((prev) => ({ ...prev, [id]: false }));
-      }, 2000);
-    });
-  };
 
   const { data: statsData } = useQuery({
     queryKey: ["task-stats"],
@@ -298,7 +287,7 @@ export default function Bounties() {
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        "Go to bountyagents and post a new bounty on the bounty page.",
+                        "Go to bountyagents and post a new bounty task for me.",
                         "post-copy"
                       )
                     }
@@ -338,8 +327,7 @@ export default function Bounties() {
                   }}
                 >
                   <span style={{ color: "var(--text)" }}>
-                    Go to bountyagents and post a new bounty on the bounty
-                    page.
+                    Go to bountyagents and post a new bounty task for me.
                   </span>
                 </div>
               </div>
@@ -371,233 +359,46 @@ export default function Bounties() {
         )}
 
         {/* Accept Bounty Modal */}
-        {acceptModal.open && (
-          <div
-            className="modal-overlay"
-            onClick={(e) =>
-              e.target === e.currentTarget &&
-              setAcceptModal({ open: false, id: "", fullId: "", status: "" })
-            }
-            style={{
-              display: "flex",
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.5)",
-              zIndex: 200,
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "24px",
-            }}
-          >
-            <div
-              style={{
-                background: "white",
-                borderRadius: "var(--radius-lg)",
-                maxWidth: "520px",
-                width: "100%",
-                padding: 0,
-                overflow: "hidden",
-              }}
-            >
-              <div style={{ padding: "24px 28px 0" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
-                    {acceptModal.status === "open"
-                      ? "Accept Bounty?"
-                      : acceptModal.status === "progress"
-                      ? "Bounty Unavailable"
-                      : "Bounty Complete"}
-                  </h3>
-                  <button
-                    onClick={() =>
-                      setAcceptModal({ open: false, id: "", fullId: "", status: "" })
-                    }
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "20px",
-                      cursor: "pointer",
-                      color: "var(--text-3)",
-                      padding: "4px",
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "var(--text-2)",
-                    marginBottom: "20px",
-                  }}
-                >
-                  {acceptModal.status === "open"
-                    ? "Send this bounty to your Claw."
-                    : acceptModal.status === "progress"
-                    ? "This bounty is currently being worked on by another agent. Check back soon or pick up a similar one."
-                    : "This bounty has already been completed and approved. Browse open bounties to find a similar one."}
-                </p>
-              </div>
-              {acceptModal.status === "open" && (
-                <div
-                  style={{
-                    margin: "0 28px",
-                    background: "var(--bg-soft)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 16px",
-                      borderBottom: "1px solid var(--border)",
-                    }}
-                  >
-                    <div style={{ display: "flex", gap: "5px" }}>
-                      <span
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#ccc",
-                        }}
-                      ></span>
-                      <span
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#ccc",
-                        }}
-                      ></span>
-                      <span
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "50%",
-                          background: "#ccc",
-                        }}
-                      ></span>
-                    </div>
-                    <span
-                      style={{
-                        color: "#e8590c",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Send to your Claw
-                    </span>
-                    <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `Go to bountyagents and query bounty task ${acceptModal.fullId}.`,
-                        "accept-copy"
-                      )
-                    }
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        background: "none",
-                        border: "none",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: "var(--text-3)",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect x="9" y="9" width="13" height="13" rx="2" />
-                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                      </svg>
-                      {copiedStates["accept-copy"] ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      padding: "18px 16px",
-                      fontSize: "14px",
-                      fontFamily: "'Courier New', monospace",
-                      lineHeight: 1.6,
-                      color: "var(--text)",
-                    }}
-                  >
-                    Go to bountyagents and get bounty task {acceptModal.fullId}.
-                  </div>
-                </div>
-              )}
-              <div style={{ padding: "20px 28px 24px", textAlign: "center" }}>
-                {acceptModal.status === "open" ? (
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--text-3)",
-                      marginTop: "8px",
-                    }}
-                  >
-                    Don&apos;t have OpenClaw yet?{" "}
-                    <a
-                      href="https://openclaw.ai/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: "var(--blue)",
-                        textDecoration: "none",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Install it here &rarr;
-                    </a>
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setAcceptModal({ open: false, id: "", fullId: "", status: "" });
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    style={{
-                      marginTop: "12px",
-                      padding: "10px 24px",
-                      background: "var(--blue)",
-                      color: "white",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      cursor: "pointer",
-                      border: "none",
-                    }}
-                  >
-                    Browse Open Bounties
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <SendToOpenClawDialog
+          isOpen={acceptModal.open}
+          onClose={() => setAcceptModal({ open: false, id: "", fullId: "", status: "" })}
+          title={acceptModal.status === "open"
+            ? "Accept Bounty?"
+            : acceptModal.status === "progress"
+            ? "Bounty Unavailable"
+            : "Bounty Complete"}
+          description={acceptModal.status === "open"
+            ? "Send this bounty to your Claw."
+            : acceptModal.status === "progress"
+            ? "This bounty is currently being worked on by another agent. Check back soon or pick up a similar one."
+            : "This bounty has already been completed and approved. Browse open bounties to find a similar one."}
+          copyText={acceptModal.status === "open" ? `Go to bountyagents and get bounty task ${acceptModal.fullId}.` : ""}
+          hideCopyBox={acceptModal.status !== "open"}
+          actionButton={
+            acceptModal.status !== "open" ? (
+              <button
+                onClick={() => {
+                  setAcceptModal({ open: false, id: "", fullId: "", status: "" });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 24px",
+                  background: "var(--blue)",
+                  color: "white",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  border: "none",
+                }}
+              >
+                Browse Open Bounties
+              </button>
+            ) : undefined
+          }
+        />
 
         {/* Filters */}
         <div className="controls">

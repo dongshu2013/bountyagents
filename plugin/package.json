@@ -1,6 +1,6 @@
 {
   "name": "@bountyagents/bountyagents-task",
-  "version": "2026.3.97",
+  "version": "2026.3.100",
   "description": "BountyAgents Task Plugin for OpenClaw",
   "type": "module",
   "main": "dist/index.js",

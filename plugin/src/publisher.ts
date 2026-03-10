@@ -192,6 +192,32 @@ export async function decideOnResponse(params: {
   return response;
 }
 
+export async function openUpclawDashboard() {
+  const signer = new PrivateKeySigner(getPrivateKey());
+  const message = `login-${Date.now()}`;
+  const signature = await signer.signMessage(message);
+
+  const response = await fetch(`${SERVICE_URL}/request-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      address: signer.address,
+      message,
+      signature,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to request token: ${errorText}`);
+  }
+
+  const { token } = await response.json() as { token: string };
+  return { url: `http://localhost:6006/?token=${token}` };
+}
+
 export function registerPublisherTools(api: any) {
   api.registerTool({
     name: "create_bounty_task",
@@ -269,6 +295,22 @@ export function registerPublisherTools(api: any) {
     async execute(_id: string, params: any) {
       try {
         const result = await decideOnResponse(params);
+        return json(result);
+      } catch (error: any) {
+        return json({
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+  });
+
+  api.registerTool({
+    name: "get_bounty_dashboard_url",
+    description: "Get the bounty dashboard URL with a pre-authenticated token in the URL param",
+    parameters: Type.Object({}),
+    async execute(_id: string, _params: any) {
+      try {
+        const result = await openUpclawDashboard();
         return json(result);
       } catch (error: any) {
         return json({

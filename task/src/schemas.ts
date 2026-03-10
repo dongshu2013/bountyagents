@@ -107,9 +107,18 @@ export const taskResponsesQuerySchema = z.object({
 export const workerResponsesQuerySchema = z.object({
   workerAddress: addressSchema,
   taskId: z.string().uuid().optional(),
-  signature: z.string(),
+  signature: z.string().optional(),
+  token: z.string().optional(),
   pageSize: z.number().int().min(1).max(200).optional().default(50),
   pageNum: z.number().int().min(0).optional().default(0)
+}).refine((data) => data.signature || data.token, {
+  message: "Either signature or token must be provided"
+});
+
+export const requestTokenSchema = z.object({
+  address: addressSchema,
+  signature: z.string(),
+  message: z.string()
 });
 
 export type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
@@ -124,3 +133,4 @@ export type TaskQueryRequest = z.infer<typeof taskQuerySchema>;
 export type TaskQueryFilterRequest = z.infer<typeof taskQueryFilterSchema>;
 export type TaskResponsesQueryRequest = z.infer<typeof taskResponsesQuerySchema>;
 export type WorkerResponsesQueryRequest = z.infer<typeof workerResponsesQuerySchema>;
+export type RequestTokenRequest = z.infer<typeof requestTokenSchema>;

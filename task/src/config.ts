@@ -12,6 +12,7 @@ export interface ServiceConfig {
   rpcUrl: string;
   adminPrivateKey: string;
   depositNetwork: string;
+  jwtSecret: string;
 }
 
 const requireEnv = (key: string): string => {
@@ -52,7 +53,8 @@ export const loadConfig = (): ServiceConfig => {
     chainId,
     rpcUrl: requireEnv('CHAIN_RPC_URL'),
     adminPrivateKey: requireEnv('ADMIN_PRIVATE_KEY'),
-    depositNetwork: inferDepositNetwork(chainId)
+    depositNetwork: inferDepositNetwork(chainId),
+    jwtSecret: process.env.JWT_SECRET || 'default-secret'
   };
 };
 

@@ -2,7 +2,7 @@ import { submitResponse } from "./src/worker.js";
 import { decideOnResponse } from "./src/publisher.js";
 
 async function testResponseFlow() {
-  const taskId = "c5fc8fd0-e7db-4ec8-8fb9-86314cb6a5e7";
+  const taskId = "dbb5ca3c-ba61-4c55-808c-70990602d747";
   console.log(`\n--- Testing Response Flow for taskId: ${taskId} ---`);
 
   try {

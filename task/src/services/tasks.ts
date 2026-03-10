@@ -272,11 +272,28 @@ export const queryWorkerResponses = async (
   ctx: AppContext,
   payload: WorkerResponsesQueryRequest
 ): Promise<ResponseRecord[]> => {
-  const canonical = workerResponsesQuerySignaturePayload(payload);
-  const verified = await verifyDetachedSignature(payload.workerAddress, canonical, payload.signature);
-  assertSignature(verified);
-
   const workerAddress = normalizeAddress(payload.workerAddress);
+
+  if (payload.token) {
+    // Verify JWT token
+    try {
+      const jwt = await import('jsonwebtoken');
+      const decoded = jwt.default.verify(payload.token, ctx.config.jwtSecret) as { address: string };
+      if (normalizeAddress(decoded.address) !== workerAddress) {
+        throw new ServiceError(403, 'forbidden', 'Token address mismatch');
+      }
+    } catch (error) {
+      throw new ServiceError(401, 'unauthorized', 'Invalid token');
+    }
+  } else if (payload.signature) {
+    // Verify signature
+    const canonical = workerResponsesQuerySignaturePayload(payload);
+    const verified = await verifyDetachedSignature(payload.workerAddress, canonical, payload.signature);
+    assertSignature(verified);
+  } else {
+    throw new ServiceError(401, 'unauthorized', 'Either signature or token must be provided');
+  }
+
   const taskId = payload.taskId ?? undefined;
   return ctx.db.listResponsesByWorker(workerAddress, {
     taskId,
