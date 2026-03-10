@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pagination } from "../../components/Pagination";
 import { SendToOpenClawDialog } from "../../components/SendToOpenClawDialog";
+import { TASK_SERVICE_URL } from "../../config";
 
 const timeAgo = (timestamp: number) => {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -56,7 +57,7 @@ export default function Bounties() {
   const { data: statsData } = useQuery({
     queryKey: ["task-stats"],
     queryFn: async () => {
-      const res = await fetch("http://localhost:3000/task-stats");
+      const res = await fetch(`${TASK_SERVICE_URL}/task-stats`);
       if (!res.ok) throw new Error("Failed to fetch task stats");
       return res.json();
     },
@@ -65,7 +66,7 @@ export default function Bounties() {
   const { data } = useQuery({
     queryKey: ["tasks", filter, page],
     queryFn: async () => {
-      const url = new URL("http://localhost:3000/tasks/query");
+      const url = new URL(`${TASK_SERVICE_URL}/tasks/query`);
       
       const filterBody: Record<string, string> = {};
       if (filter !== "all") {

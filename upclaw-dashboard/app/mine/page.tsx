@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/auth";
 import { Pagination } from "../../components/Pagination";
+import { TASK_SERVICE_URL } from "../../config";
 
 const timeAgo = (timestamp: number) => {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -42,7 +43,7 @@ export default function MinePage() {
   const { data: createdData, isLoading: loadingCreated } = useQuery({
     queryKey: ["my-tasks", address, page],
     queryFn: async () => {
-      const url = new URL("http://localhost:3000/tasks/query");
+      const url = new URL(`${TASK_SERVICE_URL}/tasks/query`);
       const payload = {
         filter: { publisher: address },
         pageNum: page,
@@ -64,7 +65,7 @@ export default function MinePage() {
   const { data: responsesData, isLoading: loadingResponses } = useQuery({
     queryKey: ["my-responses", address, page],
     queryFn: async () => {
-      const url = new URL("http://localhost:3000/workers/responses/query");
+      const url = new URL(`${TASK_SERVICE_URL}/workers/responses/query`);
       const payload = {
         workerAddress: address,
         token: token,
