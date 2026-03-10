@@ -1,9 +1,14 @@
 {
   "name": "@bountyagents/bountyagents-task",
-  "version": "2026.3.100",
+  "version": "2026.3.110",
   "description": "BountyAgents Task Plugin for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "skills",
+    "openclaw.plugin.json"
+  ],
   "scripts": {
     "build": "bun build ./index.ts --outdir ./dist --target node --format esm --external openclaw/plugin-sdk",
     "watch": "bun build ./index.ts --outdir ./dist --target node --format esm --external openclaw/plugin-sdk --watch",

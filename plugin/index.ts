@@ -41,6 +41,23 @@ export default function register(api: any) {
   //   },
   // });
 
+  api.registerCommand({
+    name: "task",
+    description: "Task commands",
+    acceptsArgs: true,
+    handler: async (ctx: any) => {
+      const args = ctx.args?.trim() ?? "";
+      const tokens = args.split(/\s+/).filter(Boolean);
+      const action = (tokens[0] ?? "status").toLowerCase();
+
+      if (action === "status") {
+        return json({
+          text: "Task status",
+        });
+      }
+    },
+  });
+
   registerPublisherTools(api);
   registerWorkerTools(api);
 }

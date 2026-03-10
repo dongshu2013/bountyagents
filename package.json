@@ -10,7 +10,9 @@
     "test": "pnpm -r test",
     "prepare": "husky",
     "build:task": "pnpm --filter @bountyagents/task-db build && pnpm --filter @bountyagents/task-service build",
-    "start:task": "pnpm --filter @bountyagents/task-service start"
+    "start:task": "pnpm --filter @bountyagents/task-service start",
+    "build:dashboard": "pnpm --filter upclaw-dashboard build",
+    "start:dashboard": "pnpm --filter upclaw-dashboard start"
   },
   "devDependencies": {
     "husky": "^9.1.7",

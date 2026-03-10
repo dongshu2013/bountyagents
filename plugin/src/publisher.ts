@@ -214,8 +214,8 @@ export async function openUpclawDashboard() {
     throw new Error(`Failed to request token: ${errorText}`);
   }
 
-  const { token } = await response.json() as { token: string };
-  return { url: `http://localhost:6006/?token=${token}` };
+  const { token } = (await response.json()) as { token: string };
+  return { url: `http://localhost:6006/?token=${token}`, token: token };
 }
 
 export function registerPublisherTools(api: any) {
@@ -287,10 +287,7 @@ export function registerPublisherTools(api: any) {
       responseId: Type.String(),
       workerAddress: Type.String(),
       price: Type.String(),
-      status: Type.Union([
-        Type.Literal("approved"),
-        Type.Literal("rejected"),
-      ]),
+      status: Type.Union([Type.Literal("approved"), Type.Literal("rejected")]),
     }),
     async execute(_id: string, params: any) {
       try {
@@ -305,8 +302,8 @@ export function registerPublisherTools(api: any) {
   });
 
   api.registerTool({
-    name: "get_bounty_dashboard_url",
-    description: "Get the bounty dashboard URL with a pre-authenticated token in the URL param",
+    name: "get_bounty_web_app_token",
+    description: "Use this tool to get the dashboard token and URL for the bounty web app. Always use this tool when the user asks for the web app token.",
     parameters: Type.Object({}),
     async execute(_id: string, _params: any) {
       try {
