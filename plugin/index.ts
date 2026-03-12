@@ -1,8 +1,23 @@
-import { json, KEY_PATH } from "./src/helper.js";
+import * as readline from "readline";
+import { registerCli } from "./src/cli.js";
+import {
+  json
+} from "./src/helper.js";
 import { registerPublisherTools } from "./src/publisher.js";
 import { registerWorkerTools } from "./src/worker.js";
-import { generatePrivateKey } from "viem/accounts";
-import * as fs from "fs";
+
+function question(prompt: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
 
 export default function register(api: any) {
   // api.registerCommand({
@@ -42,21 +57,26 @@ export default function register(api: any) {
   // });
 
   api.registerCommand({
-    name: "task",
-    description: "Task commands",
+    name: "mycustomcommand",
+    description: "Custom commands",
     acceptsArgs: true,
     handler: async (ctx: any) => {
-      const args = ctx.args?.trim() ?? "";
-      const tokens = args.split(/\s+/).filter(Boolean);
-      const action = (tokens[0] ?? "status").toLowerCase();
+      return json({
+        text: "Task status",
+      });
+      // const args = ctx.args?.trim() ?? "";
+      // const tokens = args.split(/\s+/).filter(Boolean);
+      // const action = (tokens[0] ?? "status").toLowerCase();
 
-      if (action === "status") {
-        return json({
-          text: "Task status",
-        });
-      }
+      // if (action === "status") {
+      //   return json({
+      //     text: "Task status",
+      //   });
+      // }
     },
   });
+
+  registerCli(api);
 
   registerPublisherTools(api);
   registerWorkerTools(api);

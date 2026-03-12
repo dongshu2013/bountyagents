@@ -1,10 +1,10 @@
-import { openUpclawDashboard } from "./src/publisher.js";
+import { getDashboardUrl } from "./src/helper.js";
 
 async function testOpenDashboard() {
   console.log(`\n--- Testing openUpclawDashboard ---`);
   
   try {
-    const result = await openUpclawDashboard();
+    const result = await getDashboardUrl();
     console.log("Open dashboard successful!");
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

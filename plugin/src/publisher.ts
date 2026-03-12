@@ -3,11 +3,12 @@ import { createPublicClient, createWalletClient, http, parseUnits } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 import { taskDepositKey } from "./escrow.js";
-import { json, getPrivateKey } from "./helper.js";
+import { json, getPrivateKey, getDashboardUrl } from "./helper.js";
 import { BountyAgentsPublisherPlugin } from "./index.js";
 import { PrivateKeySigner } from "./signers.js";
+import { CONFIG } from "./config.js";
 
-const SERVICE_URL = "http://localhost:3000";
+const SERVICE_URL = CONFIG.serviceUrl;
 const CONTRACT_ADDRESS = "0x55D45aFA265d0381C8A81328FfeA408D2Dd45F40";
 const TEST_TOKEN_ADDRESS = "0x56DA32693A4e6dDd0eDC932b295cb00372f37f8b";
 
@@ -67,7 +68,11 @@ export async function createBountyTask(params: {
   title: string;
   content: string;
 }) {
-  const signer = new PrivateKeySigner(getPrivateKey());
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    throw new Error("Private key not found");
+  }
+  const signer = new PrivateKeySigner(privateKey);
   const plugin = new BountyAgentsPublisherPlugin(signer, {
     serviceUrl: SERVICE_URL,
     contractAddress: CONTRACT_ADDRESS,
@@ -85,7 +90,11 @@ export async function fundBountyTask(params: {
   taskId: string;
   token: string;
 }) {
-  const signer = new PrivateKeySigner(getPrivateKey());
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    throw new Error("Private key not found");
+  }
+  const signer = new PrivateKeySigner(privateKey);
   const plugin = new BountyAgentsPublisherPlugin(signer, {
     serviceUrl: SERVICE_URL,
     contractAddress: CONTRACT_ADDRESS,
@@ -102,7 +111,11 @@ export async function depositToken(params: {
   taskId: string;
   amount?: string;
 }) {
-  const account = privateKeyToAccount(getPrivateKey());
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    throw new Error("Private key not found");
+  }
+  const account = privateKeyToAccount(privateKey);
   const chain = bscTestnet;
   const transport = http();
 
@@ -179,7 +192,11 @@ export async function decideOnResponse(params: {
   price: string;
   status: "approved" | "rejected";
 }) {
-  const signer = new PrivateKeySigner(getPrivateKey());
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    throw new Error("Private key not found");
+  }
+  const signer = new PrivateKeySigner(privateKey);
   const plugin = new BountyAgentsPublisherPlugin(signer, {
     serviceUrl: SERVICE_URL,
     contractAddress: CONTRACT_ADDRESS,
@@ -190,32 +207,6 @@ export async function decideOnResponse(params: {
     params
   )) as any;
   return response;
-}
-
-export async function openUpclawDashboard() {
-  const signer = new PrivateKeySigner(getPrivateKey());
-  const message = `login-${Date.now()}`;
-  const signature = await signer.signMessage(message);
-
-  const response = await fetch(`${SERVICE_URL}/request-token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      address: signer.address,
-      message,
-      signature,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to request token: ${errorText}`);
-  }
-
-  const { token } = (await response.json()) as { token: string };
-  return { url: `http://localhost:6006/?token=${token}`, token: token };
 }
 
 export function registerPublisherTools(api: any) {
@@ -303,11 +294,12 @@ export function registerPublisherTools(api: any) {
 
   api.registerTool({
     name: "get_bounty_web_app_token",
-    description: "Use this tool to get the dashboard token and URL for the bounty web app. Always use this tool when the user asks for the web app token.",
+    description:
+      "Use this tool to get the dashboard token and URL for the bounty web app. Always use this tool when the user asks for the web app token.",
     parameters: Type.Object({}),
     async execute(_id: string, _params: any) {
       try {
-        const result = await openUpclawDashboard();
+        const result = await getDashboardUrl();
         return json(result);
       } catch (error: any) {
         return json({
