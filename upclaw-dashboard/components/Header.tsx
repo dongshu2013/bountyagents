@@ -88,6 +88,14 @@ export const Header = () => {
                 Network
               </Link>
             </li>
+            <li>
+              <Link
+                href="/guide"
+                className={isActive("/guide") ? "active" : ""}
+              >
+                Guide
+              </Link>
+            </li>
           </ul>
           <div className="nav-cta">
             {address ? (
@@ -268,6 +276,9 @@ export const Header = () => {
         </Link>
         <Link href="/network" onClick={() => setMobileMenuOpen(false)}>
           Network
+        </Link>
+        <Link href="/guide" onClick={() => setMobileMenuOpen(false)}>
+          Guide
         </Link>
         <button onClick={() => setMobileMenuOpen(false)}>Docs</button>
         {address ? (
